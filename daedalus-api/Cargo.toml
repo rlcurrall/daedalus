@@ -1,0 +1,16 @@
+[package]
+name = "daedalus-api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4"
+chrono = { version = "0.4.31", features = ["serde"] }
+daedalus-core = { path = "../daedalus-core" }
+derive_more = "0.99.17"
+dotenvy = "0.15.7"
+paperclip = { version = "0.8.2", features = ["actix4", "chrono", "swagger-ui"] }
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.108"

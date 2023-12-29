@@ -1,0 +1,3 @@
+packages:
+  # executable applications
+  - 'daedalus-web'

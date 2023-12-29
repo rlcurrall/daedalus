@@ -1,0 +1,7 @@
+[workspace]
+
+resolver = "2"
+
+members = ["daedalus-api", "daedalus-core", "daedalus-data"]
+
+default-members = ["daedalus-api", "daedalus-core", "daedalus-data"]
