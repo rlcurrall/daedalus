@@ -50,18 +50,6 @@ pub async fn authenticate(
     Ok(Json(user))
 }
 
-// #[get("/me")]
-// pub async fn me(user_service: Data<UserService>) -> actix_web::Result<Json<User>> {
-//     let user = block(move || {
-//         user_service
-//             .me()
-//             .map_err(|e| Into::<AppError>::into(e))
-//     })
-//     .await??;
-
-//     Ok(Json(user))
-// }
-
 #[get("/{id}")]
 pub async fn find(id: Path<i64>, user_service: Data<UserService>) -> actix_web::Result<Json<User>> {
     let id = id.into_inner();
