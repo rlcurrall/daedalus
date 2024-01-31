@@ -1,6 +1,8 @@
 use diesel::r2d2;
 
-use super::{DatabaseSettings, DbConnection, DbPool};
+use crate::result::{AppError, Result};
+
+use super::{DatabaseSettings, DbConnection, DbPool, PooledConnection};
 
 pub struct PoolManager {
     pool: DbPool,
@@ -15,6 +17,12 @@ impl PoolManager {
 
     pub fn get_pool(&self) -> DbPool {
         self.pool.clone()
+    }
+
+    pub fn get_connection(&self) -> Result<PooledConnection> {
+        self.pool.get().map_err(|e| AppError::ServerError {
+            cause: e.to_string(),
+        })
     }
 
     fn build_pool(settings: &DatabaseSettings) -> DbPool {

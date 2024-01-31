@@ -3,6 +3,7 @@ use diesel::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
+use tsync::tsync;
 
 use super::defaults::{default_bool, default_i64};
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Deserialize, Insertable, Serialize)]
+#[tsync]
 #[diesel(table_name = users)]
 pub struct CreateUser {
     pub tenant_id: i32,
@@ -19,6 +21,7 @@ pub struct CreateUser {
 }
 
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
+#[tsync]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i64,
@@ -32,6 +35,7 @@ pub struct User {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
 pub struct UserQuery {
     pub tenant_id: Option<i32>,
     pub email: Option<String>,

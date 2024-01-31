@@ -102,3 +102,17 @@ impl From<diesel::result::Error> for AppError {
         }
     }
 }
+
+impl From<std::io::Error> for AppError {
+    fn from(e: std::io::Error) -> AppError {
+        AppError::ServerError {
+            cause: e.to_string(),
+        }
+    }
+}
+
+impl From<AppError> for std::io::Error {
+    fn from(e: AppError) -> std::io::Error {
+        std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+    }
+}

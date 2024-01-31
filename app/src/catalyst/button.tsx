@@ -183,13 +183,21 @@ type ButtonProps = (
   | { color?: keyof typeof styles.colors; outline?: never; plain?: never }
   | { color?: never; outline: true; plain?: never }
   | { color?: never; outline?: never; plain: true }
-) & { children: React.ReactNode } & (
+) & { children: React.ReactNode; square?: boolean } & (
     | HeadlessButtonProps
     | React.ComponentPropsWithoutRef<typeof Link>
   );
 
 export const Button = React.forwardRef(function Button(
-  { color, outline, plain, className, children, ...props }: ButtonProps,
+  {
+    color,
+    outline,
+    plain,
+    className,
+    children,
+    square = false,
+    ...props
+  }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>
 ) {
   let classes = clsx(
@@ -199,7 +207,8 @@ export const Button = React.forwardRef(function Button(
       ? styles.outline
       : plain
       ? styles.plain
-      : clsx(styles.solid, styles.colors[color ?? "dark/zinc"])
+      : clsx(styles.solid, styles.colors[color ?? "dark/zinc"]),
+    square && "rounded-none"
   );
 
   return "href" in props ? (

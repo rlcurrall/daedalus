@@ -4,6 +4,7 @@ use diesel::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
+use tsync::tsync;
 
 use super::defaults::{default_bool, default_i64};
 use crate::{
@@ -12,6 +13,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
+#[tsync]
 #[diesel(table_name = tenants)]
 pub struct Tenant {
     pub id: i32,
@@ -22,6 +24,7 @@ pub struct Tenant {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
 pub struct TenantQuery {
     pub name: Option<String>,
     #[serde(default = "default_bool::<true>")]
@@ -33,12 +36,14 @@ pub struct TenantQuery {
 }
 
 #[derive(Clone, Debug, Deserialize, Insertable, Serialize)]
+#[tsync]
 #[diesel(table_name = tenants)]
 pub struct CreateTenant {
     pub name: String,
 }
 
 #[derive(AsChangeset, Clone, Debug, Deserialize, Serialize)]
+#[tsync]
 #[diesel(table_name = tenants)]
 pub struct UpdateTenant {
     pub name: Option<String>,

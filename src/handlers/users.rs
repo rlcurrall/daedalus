@@ -5,12 +5,11 @@ use crate::models::users::{CreateUser, User, UserQuery};
 use crate::result::AppError;
 use crate::services::users::{UserCredentials, UserService};
 
-#[get("/users")]
-pub async fn list_users(
+#[get("/")]
+pub async fn list(
     Query(filter): Query<UserQuery>,
     user_service: Data<UserService>,
 ) -> actix_web::Result<Json<Vec<User>>> {
-    println!("filtering");
     let users = block(move || {
         user_service
             .list(filter.into())
@@ -21,8 +20,8 @@ pub async fn list_users(
     Ok(Json(users))
 }
 
-#[post("/users")]
-pub async fn create_user(
+#[post("/")]
+pub async fn create(
     Json(request): Json<CreateUser>,
     user_service: Data<UserService>,
 ) -> actix_web::Result<Json<User>> {
@@ -36,8 +35,8 @@ pub async fn create_user(
     Ok(Json(new_user))
 }
 
-#[post("/users/authenticate")]
-pub async fn authenticate_user(
+#[post("/authenticate")]
+pub async fn authenticate(
     Json(request): Json<UserCredentials>,
     user_service: Data<UserService>,
 ) -> actix_web::Result<Json<User>> {
@@ -51,11 +50,20 @@ pub async fn authenticate_user(
     Ok(Json(user))
 }
 
-#[get("/users/{id}")]
-pub async fn get_user(
-    id: Path<i64>,
-    user_service: Data<UserService>,
-) -> actix_web::Result<Json<User>> {
+// #[get("/me")]
+// pub async fn me(user_service: Data<UserService>) -> actix_web::Result<Json<User>> {
+//     let user = block(move || {
+//         user_service
+//             .me()
+//             .map_err(|e| Into::<AppError>::into(e))
+//     })
+//     .await??;
+
+//     Ok(Json(user))
+// }
+
+#[get("/{id}")]
+pub async fn find(id: Path<i64>, user_service: Data<UserService>) -> actix_web::Result<Json<User>> {
     let id = id.into_inner();
     let user = block(move || user_service.find(id).map_err(|e| Into::<AppError>::into(e)))
         .await??
@@ -65,4 +73,11 @@ pub async fn get_user(
         })?;
 
     Ok(Json(user))
+}
+
+pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+    cfg.service(list)
+        .service(create)
+        .service(find)
+        .service(authenticate);
 }

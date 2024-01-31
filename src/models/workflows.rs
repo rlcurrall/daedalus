@@ -1,74 +1,295 @@
-use diesel::sql_types::Uuid;
+use std::io::Write;
 
-pub struct Workflow {
-    pub id: Uuid,
+use diesel::{
+    deserialize::{FromSql, FromSqlRow},
+    expression::AsExpression,
+    pg::PgValue,
+    prelude::*,
+    serialize::{self, IsNull, Output, ToSql},
+    sql_types::Jsonb,
+};
+use serde::{Deserialize, Serialize};
+use tsync::tsync;
+use uuid::Uuid;
+
+use super::{
+    common::Paginated,
+    defaults::{default_bool, default_i32, default_i64},
+};
+use crate::{
+    database::{schema::workflows, DbConnection, DB},
+    result::AppError,
+};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+pub struct WorkflowPosition {
+    #[serde(default = "default_i32::<0>")]
+    pub x: i32,
+    #[serde(default = "default_i32::<0>")]
+    pub y: i32,
+}
+
+#[derive(Clone, Deserialize, Insertable, Serialize)]
+#[diesel(table_name = workflows)]
+#[tsync]
+pub struct NewWorkflow {
     pub tenant_id: i32,
     pub name: String,
-    pub description: String,
-    pub initial_state_id: Option<Uuid>,
+    pub description: Option<String>,
+    pub definition: WorkflowDefinition,
 }
 
+#[derive(AsChangeset, Clone, Deserialize, Serialize)]
+#[diesel(table_name = workflows)]
+#[tsync]
+pub struct UpdateWorkflow {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub definition: Option<WorkflowDefinition>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[tsync]
+pub struct WorkflowQuery {
+    pub tenant_id: Option<i32>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    #[serde(default = "default_bool::<true>")]
+    pub active: bool,
+    #[serde(default = "default_i64::<1>")]
+    pub page: i64,
+    #[serde(default = "default_i64::<10>")]
+    pub per_page: i64,
+}
+
+impl Workflow {
+    pub fn create(
+        conn: &mut DbConnection,
+        new_workflow: NewWorkflow,
+    ) -> Result<Workflow, AppError> {
+        let res = diesel::insert_into(workflows::table)
+            .values(new_workflow)
+            .get_result(conn)?;
+
+        Ok(res)
+    }
+
+    pub fn update(
+        conn: &mut DbConnection,
+        id: i64,
+        update_workflow: UpdateWorkflow,
+    ) -> Result<Workflow, AppError> {
+        let res = diesel::update(workflows::table)
+            .filter(workflows::id.eq(id))
+            .set(update_workflow)
+            .get_result(conn)?;
+
+        Ok(res)
+    }
+
+    pub fn find(conn: &mut DbConnection, id: i64) -> Result<Option<Workflow>, AppError> {
+        let res = workflows::table
+            .select(Workflow::as_select())
+            .filter(workflows::id.eq(id))
+            .get_result(conn)
+            .optional()?;
+
+        Ok(res)
+    }
+
+    pub fn count(conn: &mut DbConnection, query: WorkflowQuery) -> Result<i64, AppError> {
+        let mut q = workflows::table
+            .select(diesel::dsl::count(workflows::id))
+            .into_boxed();
+
+        if let Some(tenant_id) = query.tenant_id {
+            q = q.filter(workflows::tenant_id.eq(tenant_id));
+        }
+
+        if let Some(name) = query.name {
+            q = q.filter(workflows::name.eq(name));
+        }
+
+        if let Some(description) = query.description {
+            q = q.filter(workflows::description.eq(description));
+        }
+
+        let res = q.get_result(conn)?;
+
+        Ok(res)
+    }
+
+    pub fn list(conn: &mut DbConnection, query: WorkflowQuery) -> Result<Vec<Workflow>, AppError> {
+        let mut q = workflows::table.select(Workflow::as_select()).into_boxed();
+
+        if let Some(tenant_id) = query.tenant_id {
+            q = q.filter(workflows::tenant_id.eq(tenant_id));
+        }
+
+        if let Some(name) = query.name {
+            q = q.filter(workflows::name.eq(name));
+        }
+
+        if let Some(description) = query.description {
+            q = q.filter(workflows::description.eq(description));
+        }
+
+        let res = q
+            .offset((query.page - 1) * query.per_page)
+            .limit(query.per_page)
+            .get_results(conn)?;
+
+        Ok(res)
+    }
+
+    pub fn paginate(
+        conn: &mut DbConnection,
+        query: WorkflowQuery,
+    ) -> Result<Paginated<Workflow>, AppError> {
+        let total = Workflow::count(conn, query.clone())?;
+        let data = Workflow::list(conn, query.clone())?;
+
+        Ok(Paginated {
+            total,
+            page: query.page,
+            per_page: query.per_page,
+            data,
+        })
+    }
+}
+
+#[derive(Deserialize, Queryable, Identifiable, Selectable, Serialize)]
+#[tsync]
+#[diesel(table_name = workflows)]
+pub struct Workflow {
+    pub id: i64,
+    pub tenant_id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub definition: WorkflowDefinition,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl FromSql<Jsonb, DB> for WorkflowDefinition {
+    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
+        let bytes = bytes.as_bytes();
+
+        if bytes[0] != 1 {
+            return Err("Unsupported JSONB version".into());
+        }
+        serde_json::from_slice(&bytes[1..]).map_err(Into::into)
+    }
+}
+
+impl ToSql<Jsonb, DB> for WorkflowDefinition {
+    fn to_sql(&self, out: &mut Output<DB>) -> serialize::Result {
+        out.write_all(&[1])?;
+        serde_json::to_writer(out, self)
+            .map(|_| IsNull::No)
+            .map_err(Into::into)
+    }
+}
+
+#[derive(AsExpression, Clone, Debug, Deserialize, FromSqlRow, Serialize)]
+#[tsync]
+#[diesel(sql_type = Jsonb)]
+pub struct WorkflowDefinition {
+    pub initial_state: Uuid,
+    pub states: Vec<WorkflowState>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
 pub struct WorkflowState {
     pub id: Uuid,
-    pub workflow_id: Uuid,
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
+    pub entry_actions: Vec<WorkflowAction>,
+    pub exit_actions: Vec<WorkflowAction>,
+    pub transitions: Vec<WorkflowTransition>,
+    pub position: WorkflowPosition,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
 pub struct WorkflowAction {
     pub id: Uuid,
-    pub state_id: Uuid,
     pub name: String,
-    pub description: String,
-    pub timing: ActionTrigger,
-    pub configuration: ActionConfiguration,
+    pub description: Option<String>,
+    pub definition: ActionDefinition,
 }
 
-pub struct WorkflowTrigger {
-    pub id: Uuid,
-    pub state_id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub configuration: TriggerConfiguration,
-}
-
-pub enum ActionTrigger {
-    Entry,
-    Exit,
-}
-
-pub enum ActionConfiguration {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+#[serde(tag = "type")]
+pub enum ActionDefinition {
     AutoAssign,
-    AssignTo { user_id: i64 },
-    Email { template_id: i64, email: String },
-    NotifyCreator { template_id: i64 },
-    NotifyManager { template_id: i64, user_id: i64 },
-    NotifyVendor { template_id: i64 },
+    AssignTo {
+        user_id: i64,
+    },
+    Email {
+        template_id: i64,
+        email: String,
+    },
+    Notify {
+        template_id: i64,
+        target: NotifyTarget,
+    },
 }
 
-pub enum TriggerConfiguration {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+#[serde(tag = "type")]
+pub enum NotifyTarget {
+    Creator,
+    User { id: i64 },
+    Vendor,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+pub struct WorkflowTransition {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub definition: TransitionDefinition,
+    pub position: WorkflowPosition,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+#[serde(tag = "type")]
+pub enum TransitionDefinition {
     Automatic {
         target_state_id: Uuid,
     },
     Approval {
         approver_id: i64,
-        target_state_id: Uuid,
+        options: Vec<TransitionOption>,
     },
     Manual {
-        options: Vec<ManualTriggerOption>,
+        options: Vec<TransitionOption>,
     },
     VendorConfirmation {
         target_state_id: Uuid,
     },
 }
 
-pub struct ManualTriggerOption {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+pub struct TransitionOption {
     pub label: String,
     pub target_state_id: Uuid,
-    pub data: Vec<TriggerOptionData>,
+    pub data: Vec<TransitionOptionData>,
 }
 
-pub enum TriggerOptionData {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+#[serde(tag = "type")]
+pub enum TransitionOptionData {
     Comment,
     Date { label: String },
     VendorId { label: String },

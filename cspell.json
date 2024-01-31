@@ -7,13 +7,20 @@
     "chrono",
     "clsx",
     "Currall",
+    "Dagre",
+    "dagrejs",
     "dotenv",
     "dotenvy",
+    "graphlib",
     "Hasher",
     "headlessui",
+    "heroicons",
     "Insertable",
+    "rankdir",
+    "reactflow",
     "Robb",
     "Signin",
-    "tailwindcss"
+    "tailwindcss",
+    "tsync"
   ]
 }

@@ -5,8 +5,8 @@ use crate::models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
 use crate::result::AppError;
 use crate::services::tenants::TenantService;
 
-#[get("/tenants")]
-pub async fn list_tenants(
+#[get("/")]
+pub async fn list(
     Query(query): Query<TenantQuery>,
     tenant_service: Data<TenantService>,
 ) -> actix_web::Result<Json<Vec<Tenant>>> {
@@ -23,8 +23,8 @@ pub async fn list_tenants(
     Ok(Json(tenants))
 }
 
-#[post("/tenants")]
-pub async fn create_tenant(
+#[post("/")]
+pub async fn create(
     Json(request): Json<CreateTenant>,
     tenant_service: Data<TenantService>,
 ) -> actix_web::Result<Json<Tenant>> {
@@ -39,8 +39,8 @@ pub async fn create_tenant(
     Ok(Json(new_tenant))
 }
 
-#[get("/tenants/{id}")]
-pub async fn get_tenant(
+#[get("/{id}")]
+pub async fn find(
     id: Path<i32>,
     tenant_service: Data<TenantService>,
 ) -> actix_web::Result<Json<Tenant>> {
@@ -60,8 +60,8 @@ pub async fn get_tenant(
     Ok(Json(tenant))
 }
 
-#[post("/tenants/{id}")]
-pub async fn update_tenant(
+#[post("/{id}")]
+pub async fn update(
     id: Path<i32>,
     Json(request): Json<UpdateTenant>,
     tenant_service: Data<TenantService>,
@@ -76,4 +76,11 @@ pub async fn update_tenant(
     .into();
 
     Ok(Json(updated_tenant))
+}
+
+pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
+    cfg.service(list);
+    cfg.service(create);
+    cfg.service(find);
+    cfg.service(update);
 }
