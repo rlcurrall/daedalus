@@ -5,7 +5,7 @@ use crate::models::users::{CreateUser, User, UserQuery};
 use crate::result::AppError;
 use crate::services::users::{UserCredentials, UserService};
 
-#[get("/")]
+#[get("/users")]
 pub async fn list(
     Query(filter): Query<UserQuery>,
     user_service: Data<UserService>,
@@ -20,7 +20,7 @@ pub async fn list(
     Ok(Json(users))
 }
 
-#[post("/")]
+#[post("/users")]
 pub async fn create(
     Json(request): Json<CreateUser>,
     user_service: Data<UserService>,
@@ -35,7 +35,7 @@ pub async fn create(
     Ok(Json(new_user))
 }
 
-#[post("/authenticate")]
+#[post("/users/authenticate")]
 pub async fn authenticate(
     Json(request): Json<UserCredentials>,
     user_service: Data<UserService>,
@@ -50,7 +50,7 @@ pub async fn authenticate(
     Ok(Json(user))
 }
 
-#[get("/{id}")]
+#[get("/users/{id}")]
 pub async fn find(id: Path<i64>, user_service: Data<UserService>) -> actix_web::Result<Json<User>> {
     let id = id.into_inner();
     let user = block(move || user_service.find(id).map_err(|e| Into::<AppError>::into(e)))

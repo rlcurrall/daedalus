@@ -3,6 +3,7 @@ use actix_session::{
 };
 use actix_web::{
     cookie::{self, Key},
+    middleware::{Logger, NormalizePath},
     web::{scope, Data},
     App, HttpResponse, HttpServer,
 };
@@ -43,7 +44,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(user_service.clone()))
             .app_data(Data::new(tenant_service.clone()))
             .app_data(Data::new(workflow_service.clone()))
-            .app_data(Data::new(handlebars.clone()))
+            .wrap(NormalizePath::trim())
+            .wrap(Logger::default())
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), Key::from(&[0; 64]))
                     .cookie_secure(false)

@@ -14,6 +14,7 @@ pub type DbConnection = PgConnection;
 pub type DbPool = r2d2::Pool<r2d2::ConnectionManager<DbConnection>>;
 pub type PooledConnection = r2d2::PooledConnection<r2d2::ConnectionManager<DbConnection>>;
 
+#[derive(Clone, Debug)]
 pub struct DatabaseSettings {
     pub database_url: String,
     /// The maximum number of connections allowed in the pool.

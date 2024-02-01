@@ -15,11 +15,15 @@
     "Hasher",
     "headlessui",
     "heroicons",
+    "HTMX",
     "Insertable",
+    "Pico",
     "rankdir",
     "reactflow",
+    "Renderable",
     "Robb",
     "Signin",
+    "stylesheet",
     "tailwindcss",
     "tsync"
   ]

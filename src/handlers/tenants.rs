@@ -5,7 +5,7 @@ use crate::models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
 use crate::result::AppError;
 use crate::services::tenants::TenantService;
 
-#[get("/")]
+#[get("/tenants")]
 pub async fn list(
     Query(query): Query<TenantQuery>,
     tenant_service: Data<TenantService>,
@@ -23,7 +23,7 @@ pub async fn list(
     Ok(Json(tenants))
 }
 
-#[post("/")]
+#[post("/tenants")]
 pub async fn create(
     Json(request): Json<CreateTenant>,
     tenant_service: Data<TenantService>,
@@ -39,7 +39,7 @@ pub async fn create(
     Ok(Json(new_tenant))
 }
 
-#[get("/{id}")]
+#[get("/tenants/{id}")]
 pub async fn find(
     id: Path<i32>,
     tenant_service: Data<TenantService>,
@@ -60,7 +60,7 @@ pub async fn find(
     Ok(Json(tenant))
 }
 
-#[post("/{id}")]
+#[post("/tenants/{id}")]
 pub async fn update(
     id: Path<i32>,
     Json(request): Json<UpdateTenant>,
