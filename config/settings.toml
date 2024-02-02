@@ -1,0 +1,19 @@
+name = "daedalus_api"
+debug = true
+
+[database]
+url = "postgres://postgres:postgres@localhost:5432/daedalus"
+max_connections = 10
+idle_timeout = 600
+connection_timeout = 30
+thread_pool_size = 3
+
+[server]
+port = 8080
+workers = 8
+
+[session]
+# To generate a new key run the following command:
+#   $ openssl rand 64 | openssl enc -A -a
+secret = "q44esU/fa/yvH8nXZ35NVN1rlF9esy+ipGwxIZ8og/go6Dmj7nztmANsxSY+CUthaDjnRIjPtt2/ukXEqPrRig=="
+lifetime = 7200

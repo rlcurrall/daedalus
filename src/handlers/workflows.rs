@@ -1,7 +1,4 @@
-use actix_web::{
-    get, post,
-    web::{block, Data, Json, Path, Query},
-};
+use actix_web::web::{block, Data, Json, Path, Query};
 
 use crate::{
     models::{
@@ -12,7 +9,6 @@ use crate::{
     services::workflows::WorkflowService,
 };
 
-#[get("/workflows")]
 pub async fn list(
     Query(filter): Query<WorkflowQuery>,
     workflow_service: Data<WorkflowService>,
@@ -27,7 +23,6 @@ pub async fn list(
     Ok(Json(workflows))
 }
 
-#[post("/workflows")]
 pub async fn create(
     Json(request): Json<NewWorkflow>,
     workflow_service: Data<WorkflowService>,
@@ -42,7 +37,6 @@ pub async fn create(
     Ok(Json(new_workflow))
 }
 
-#[get("/workflows/{id}")]
 pub async fn get(
     id: Path<i64>,
     workflow_service: Data<WorkflowService>,
@@ -65,7 +59,6 @@ pub async fn get(
     }
 }
 
-#[post("/workflows/{id}")]
 pub async fn update(
     id: Path<i64>,
     Json(request): Json<UpdateWorkflow>,
@@ -80,11 +73,4 @@ pub async fn update(
     .await??;
 
     Ok(Json(workflow))
-}
-
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.service(list);
-    cfg.service(create);
-    cfg.service(get);
-    cfg.service(update);
 }

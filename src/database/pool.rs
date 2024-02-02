@@ -1,9 +1,11 @@
 use diesel::r2d2;
 
+use crate::config::DatabaseSettings;
 use crate::result::{AppError, Result};
 
-use super::{DatabaseSettings, DbConnection, DbPool, PooledConnection};
+use super::{DbConnection, DbPool, PooledConnection};
 
+#[derive(Clone)]
 pub struct PoolManager {
     pool: DbPool,
 }
@@ -26,21 +28,13 @@ impl PoolManager {
     }
 
     fn build_pool(settings: &DatabaseSettings) -> DbPool {
-        let manager = r2d2::ConnectionManager::<DbConnection>::new(&settings.database_url);
-        let mut builder = r2d2::Pool::builder();
+        let manager = r2d2::ConnectionManager::<DbConnection>::new(&settings.url);
 
-        if let Some(max_connections) = settings.max_connections {
-            builder = builder.max_size(max_connections);
-        }
-
-        if let Some(idle_timeout) = settings.idle_timeout {
-            builder = builder.idle_timeout(Some(idle_timeout));
-        }
-
-        if let Some(connection_timeout) = settings.connection_timeout {
-            builder = builder.connection_timeout(connection_timeout);
-        }
-
-        builder.build(manager).expect("Failed to create pool.")
+        r2d2::Pool::builder()
+            .max_size(settings.max_connections)
+            .idle_timeout(Some(settings.idle_timeout))
+            .connection_timeout(settings.connection_timeout)
+            .build(manager)
+            .expect("Failed to create pool.")
     }
 }

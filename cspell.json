@@ -24,6 +24,7 @@
     "Renderable",
     "Robb",
     "Signin",
+    "simplelog",
     "stylesheet",
     "tailwindcss",
     "tsync"

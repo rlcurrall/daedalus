@@ -20,6 +20,9 @@ pub enum AppError {
 
     #[display(fmt = "{}", cause)]
     Forbidden { cause: String },
+
+    #[display(fmt = "Unauthorized")]
+    Unauthorized,
 }
 
 impl error::ResponseError for AppError {
@@ -31,6 +34,7 @@ impl error::ResponseError for AppError {
                 AppError::NotFound { .. } => "NotFound",
                 AppError::Forbidden { .. } => "Forbidden",
                 AppError::BadRequest { .. } => "BadRequest",
+                AppError::Unauthorized => "Unauthorized",
             },
             "error": self.to_string()
         }))
@@ -42,6 +46,7 @@ impl error::ResponseError for AppError {
             AppError::NotFound { .. } => StatusCode::NOT_FOUND,
             AppError::Forbidden { .. } => StatusCode::FORBIDDEN,
             AppError::BadRequest { .. } => StatusCode::BAD_REQUEST,
+            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
         }
     }
 }

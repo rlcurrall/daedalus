@@ -1,91 +1,96 @@
+use std::{fs::File, time::SystemTime};
+
+use actix_identity::IdentityMiddleware;
 use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{
     cookie::{self, Key},
-    middleware::{Logger, NormalizePath},
-    web::{scope, Data},
-    App, HttpResponse, HttpServer,
+    middleware::{Compress, NormalizePath},
+    web::Data,
+    App, HttpServer,
 };
-use askama::Template;
 use dotenvy::dotenv;
+use simplelog::{
+    ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+};
 use tracing_actix_web::TracingLogger;
 
 use daedalus::{
-    database::{DatabaseSettings, PoolManager},
-    handlers::{tenants, users, workflows},
+    config::{AppSettings, ServerSettings, SessionSettings},
+    database::{Migrator, PoolManager},
+    routes,
     services::{tenants::TenantService, users::UserService, workflows::WorkflowService},
 };
-
-async fn index() -> HttpResponse {
-    let body = HomePage.render().unwrap();
-    HttpResponse::Ok().body(body)
-}
-
-#[derive(Clone, Debug)]
-struct AppSettings {
-    _debug: bool,
-    database: DatabaseSettings,
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
-    // todo: source this from a file or env vars
-    let app_settings = AppSettings {
-        _debug: cfg!(debug_assertions),
-        database: DatabaseSettings {
-            database_url: std::env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
-            max_connections: None,
-            idle_timeout: None,
-            connection_timeout: None,
-            thread_pool_size: None,
-        },
-    };
+    let app_settings = AppSettings::new().expect("Failed to load settings");
+
+    setup_logger(&app_settings.name);
 
     let pool_manager = PoolManager::new(&app_settings.database);
-    let user_service = UserService::new(pool_manager.get_pool());
-    let workflow_service = WorkflowService::new(pool_manager.get_pool());
-    let tenant_service = TenantService::new(pool_manager.get_pool());
+    let migrator = Migrator::new(pool_manager.get_pool());
+    migrator.run().expect("Failed to run migrations");
 
+    let ServerSettings { port, workers } = app_settings.server.clone();
     HttpServer::new(move || {
+        let pool_manager = pool_manager.clone();
+        let user_service = UserService::new(pool_manager.get_pool());
+        let workflow_service = WorkflowService::new(pool_manager.get_pool());
+        let tenant_service = TenantService::new(pool_manager.get_pool());
+
+        let SessionSettings { secret, lifetime } = app_settings.session.clone();
+        let session_middleware = SessionMiddleware::builder(
+            CookieSessionStore::default(),
+            Key::from(&secret.as_bytes()),
+        )
+        .cookie_secure(false)
+        .session_lifecycle(
+            PersistentSession::default()
+                .session_ttl(cookie::time::Duration::seconds(lifetime.as_secs() as i64)),
+        )
+        .build();
+
         App::new()
-            .app_data(Data::new(user_service.clone()))
-            .app_data(Data::new(tenant_service.clone()))
-            .app_data(Data::new(workflow_service.clone()))
-            .app_data(Data::new(app_settings.clone()))
+            .app_data(Data::new(user_service))
+            .app_data(Data::new(tenant_service))
+            .app_data(Data::new(workflow_service))
             .wrap(NormalizePath::trim())
-            .wrap(Logger::default())
+            .wrap(IdentityMiddleware::default())
+            .wrap(Compress::default())
+            .wrap(session_middleware)
             .wrap(TracingLogger::default())
-            .wrap(
-                SessionMiddleware::builder(CookieSessionStore::default(), Key::from(&[0; 64]))
-                    .cookie_secure(false)
-                    .session_lifecycle(
-                        PersistentSession::default().session_ttl(cookie::time::Duration::hours(2)),
-                    )
-                    .build(),
-            )
-            .configure(configure_web)
-            .configure(configure_api)
+            .configure(routes::web)
+            .configure(routes::api)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", port))?
+    .workers(workers)
     .run()
     .await
 }
 
-pub fn configure_api(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.service(
-        scope("/api")
-            .configure(users::configure)
-            .configure(tenants::configure)
-            .configure(workflows::configure),
+fn setup_logger(app_name: &str) {
+    let filename = format!(
+        "logs/{}-{}.log",
+        app_name,
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     );
-}
-
-#[derive(Template)]
-#[template(path = "pages/index.j2")]
-struct HomePage;
-
-pub fn configure_web(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.route("/", actix_web::web::get().to(index));
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            File::create(filename).unwrap(),
+        ),
+    ])
+    .unwrap();
 }

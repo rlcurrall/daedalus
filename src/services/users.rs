@@ -92,13 +92,12 @@ impl UserService {
         let mut conn = self.get_connection()?;
 
         let user = User::find_by_email_and_tenant(&mut conn, email.clone(), tenant_id)?.ok_or(
-            AppError::NotFound {
-                entity: "User".to_string(),
-                id: email.clone(),
+            AppError::Forbidden {
+                cause: "Invalid email or password".to_string(),
             },
         )?;
 
-        let parsed_hash = PasswordHash::new(&user.password).map_err(|e| AppError::Forbidden {
+        let parsed_hash = PasswordHash::new(&user.password).map_err(|e| AppError::ServerError {
             cause: e.to_string(),
         })?;
         let password_match = Argon2::default()
@@ -108,7 +107,7 @@ impl UserService {
         match password_match {
             true => Ok(user.into()),
             false => Err(AppError::Forbidden {
-                cause: "Invalid password".to_string(),
+                cause: "Invalid email or password".to_string(),
             }),
         }
     }
