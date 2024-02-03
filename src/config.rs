@@ -33,6 +33,7 @@ pub struct ServerSettings {
 #[derive(Clone, Debug, Deserialize)]
 pub struct SessionSettings {
     pub secret: String,
+    pub secure: bool,
     #[serde_as(as = "DurationSeconds<u64>")]
     pub lifetime: Duration,
 }

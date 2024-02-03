@@ -1,6 +1,11 @@
-use actix_web::web::{block, Data, Json, Path, Query};
+use actix_identity::Identity;
+use actix_web::{
+    web::{block, Data, Json, Path, Query},
+    Result,
+};
 
 use crate::{
+    database::PoolManager,
     models::{
         common::Paginated,
         workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery},
@@ -10,11 +15,13 @@ use crate::{
 };
 
 pub async fn list(
+    _: Identity,
     Query(filter): Query<WorkflowQuery>,
-    workflow_service: Data<WorkflowService>,
-) -> actix_web::Result<Json<Paginated<Workflow>>> {
+    pool: Data<PoolManager>,
+) -> Result<Json<Paginated<Workflow>>> {
     let workflows = block(move || {
-        workflow_service
+        let conn = pool.get()?;
+        WorkflowService::new(conn)
             .paginate(filter.into())
             .map_err(|e| Into::<AppError>::into(e))
     })
@@ -24,11 +31,13 @@ pub async fn list(
 }
 
 pub async fn create(
+    _: Identity,
     Json(request): Json<NewWorkflow>,
-    workflow_service: Data<WorkflowService>,
-) -> actix_web::Result<Json<Workflow>> {
+    pool: Data<PoolManager>,
+) -> Result<Json<Workflow>> {
     let new_workflow = block(move || {
-        workflow_service
+        let conn = pool.get()?;
+        WorkflowService::new(conn)
             .create(request.into())
             .map_err(|e| Into::<AppError>::into(e))
     })
@@ -37,13 +46,11 @@ pub async fn create(
     Ok(Json(new_workflow))
 }
 
-pub async fn get(
-    id: Path<i64>,
-    workflow_service: Data<WorkflowService>,
-) -> actix_web::Result<Json<Workflow>> {
+pub async fn get(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
-        workflow_service
+        let conn = pool.get()?;
+        WorkflowService::new(conn)
             .find(id)
             .map_err(|e| Into::<AppError>::into(e))
     })
@@ -60,13 +67,15 @@ pub async fn get(
 }
 
 pub async fn update(
+    _: Identity,
     id: Path<i64>,
     Json(request): Json<UpdateWorkflow>,
-    workflow_service: Data<WorkflowService>,
-) -> actix_web::Result<Json<Workflow>> {
+    pool: Data<PoolManager>,
+) -> Result<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
-        workflow_service
+        let conn = pool.get()?;
+        WorkflowService::new(conn)
             .update(id, request)
             .map_err(|e| Into::<AppError>::into(e))
     })

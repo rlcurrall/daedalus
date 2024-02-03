@@ -21,7 +21,7 @@ impl PoolManager {
         self.pool.clone()
     }
 
-    pub fn get_connection(&self) -> Result<PooledConnection> {
+    pub fn get(&self) -> Result<PooledConnection> {
         self.pool.get().map_err(|e| AppError::ServerError {
             cause: e.to_string(),
         })

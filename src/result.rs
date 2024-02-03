@@ -121,3 +121,11 @@ impl From<AppError> for std::io::Error {
         std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
     }
 }
+
+impl From<diesel::r2d2::Error> for AppError {
+    fn from(e: diesel::r2d2::Error) -> AppError {
+        AppError::ServerError {
+            cause: e.to_string(),
+        }
+    }
+}

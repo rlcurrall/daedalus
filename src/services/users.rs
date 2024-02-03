@@ -4,10 +4,7 @@ use argon2::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    database::DbPool,
-    models::users::{CreateUser, User, UserQuery},
-};
+use crate::models::users::{CreateUser, User, UserQuery};
 use crate::{
     database::PooledConnection,
     result::{AppError, Result},
@@ -20,54 +17,50 @@ pub struct UserCredentials {
     pub password: String,
 }
 
-#[derive(Clone)]
 pub struct UserService {
-    pool: DbPool,
+    conn: PooledConnection,
 }
 
 impl UserService {
-    pub fn new(pool: DbPool) -> Self {
-        Self { pool }
+    pub fn new(conn: PooledConnection) -> Self {
+        Self { conn }
     }
 
-    pub fn find(&self, id: i64) -> Result<Option<User>> {
-        let mut conn = self.get_connection()?;
-
-        Ok(User::find(&mut conn, id)?)
+    pub fn find(&mut self, id: i64) -> Result<Option<User>> {
+        Ok(User::find(&mut self.conn, id)?)
     }
 
-    pub fn find_by_email_and_tenant(&self, email: String, tenant_id: i32) -> Result<Option<User>> {
-        let mut conn = self.get_connection()?;
-
-        Ok(User::find_by_email_and_tenant(&mut conn, email, tenant_id)?.map(|u| u.into()))
+    pub fn find_by_email_and_tenant(
+        &mut self,
+        email: String,
+        tenant_id: i32,
+    ) -> Result<Option<User>> {
+        Ok(User::find_by_email_and_tenant(&mut self.conn, email, tenant_id)?.map(|u| u.into()))
     }
 
-    pub fn list(&self, filter: UserQuery) -> Result<Vec<User>> {
-        let mut conn = self.get_connection()?;
-
-        Ok(User::list(&mut conn, filter)?)
+    pub fn list(&mut self, filter: UserQuery) -> Result<Vec<User>> {
+        Ok(User::list(&mut self.conn, filter)?)
     }
 
     pub fn create(
-        &self,
+        &mut self,
         CreateUser {
             tenant_id,
             email,
             password,
         }: CreateUser,
     ) -> Result<User> {
-        let mut conn = self.get_connection()?;
-
         let salt = SaltString::generate(&mut OsRng);
         let argon = Argon2::default();
         let password_hash = argon.hash_password(password.as_bytes(), &salt)?.to_string();
 
         let exists =
-            User::find_by_email_and_tenant(&mut conn, email.clone(), tenant_id.clone())?.is_some();
+            User::find_by_email_and_tenant(&mut self.conn, email.clone(), tenant_id.clone())?
+                .is_some();
 
         match exists {
             false => Ok(User::create(
-                &mut conn,
+                &mut self.conn,
                 CreateUser {
                     tenant_id,
                     email,
@@ -82,20 +75,17 @@ impl UserService {
     }
 
     pub fn authenticate(
-        &self,
+        &mut self,
         UserCredentials {
             tenant_id,
             email,
             password,
         }: UserCredentials,
     ) -> Result<User> {
-        let mut conn = self.get_connection()?;
-
-        let user = User::find_by_email_and_tenant(&mut conn, email.clone(), tenant_id)?.ok_or(
-            AppError::Forbidden {
+        let user = User::find_by_email_and_tenant(&mut self.conn, email.clone(), tenant_id)?
+            .ok_or(AppError::Forbidden {
                 cause: "Invalid email or password".to_string(),
-            },
-        )?;
+            })?;
 
         let parsed_hash = PasswordHash::new(&user.password).map_err(|e| AppError::ServerError {
             cause: e.to_string(),
@@ -110,11 +100,5 @@ impl UserService {
                 cause: "Invalid email or password".to_string(),
             }),
         }
-    }
-
-    fn get_connection(&self) -> Result<PooledConnection> {
-        self.pool.get().map_err(|e| AppError::ServerError {
-            cause: e.to_string(),
-        })
     }
 }

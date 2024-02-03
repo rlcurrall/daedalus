@@ -1,9 +1,7 @@
 use std::{fs::File, time::SystemTime};
 
 use actix_identity::IdentityMiddleware;
-use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{
-    cookie::{self, Key},
     middleware::{Compress, NormalizePath},
     web::Data,
     App, HttpServer,
@@ -15,10 +13,10 @@ use simplelog::{
 use tracing_actix_web::TracingLogger;
 
 use daedalus::{
-    config::{AppSettings, ServerSettings, SessionSettings},
+    config::{AppSettings, ServerSettings},
     database::{Migrator, PoolManager},
+    middleware::session::SessionMiddlewareBuilder,
     routes,
-    services::{tenants::TenantService, users::UserService, workflows::WorkflowService},
 };
 
 #[actix_web::main]
@@ -30,36 +28,20 @@ async fn main() -> std::io::Result<()> {
     setup_logger(&app_settings.name);
 
     let pool_manager = PoolManager::new(&app_settings.database);
-    let migrator = Migrator::new(pool_manager.get_pool());
-    migrator.run().expect("Failed to run migrations");
+    Migrator::new(pool_manager.get()?)
+        .run()
+        .expect("Failed to run migrations");
 
     let ServerSettings { port, workers } = app_settings.server.clone();
     HttpServer::new(move || {
-        let pool_manager = pool_manager.clone();
-        let user_service = UserService::new(pool_manager.get_pool());
-        let workflow_service = WorkflowService::new(pool_manager.get_pool());
-        let tenant_service = TenantService::new(pool_manager.get_pool());
-
-        let SessionSettings { secret, lifetime } = app_settings.session.clone();
-        let session_middleware = SessionMiddleware::builder(
-            CookieSessionStore::default(),
-            Key::from(&secret.as_bytes()),
-        )
-        .cookie_secure(false)
-        .session_lifecycle(
-            PersistentSession::default()
-                .session_ttl(cookie::time::Duration::seconds(lifetime.as_secs() as i64)),
-        )
-        .build();
-
         App::new()
-            .app_data(Data::new(user_service))
-            .app_data(Data::new(tenant_service))
-            .app_data(Data::new(workflow_service))
+            .app_data(Data::new(pool_manager.clone()))
             .wrap(NormalizePath::trim())
             .wrap(IdentityMiddleware::default())
             .wrap(Compress::default())
-            .wrap(session_middleware)
+            .wrap(SessionMiddlewareBuilder::build(
+                app_settings.session.clone(),
+            ))
             .wrap(TracingLogger::default())
             .configure(routes::web)
             .configure(routes::api)
