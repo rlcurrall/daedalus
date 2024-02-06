@@ -1,9 +1,4 @@
-use actix_web::{
-    dev::ServiceResponse,
-    middleware::{ErrorHandlerResponse, ErrorHandlers},
-    web::{get, post, resource, scope},
-    HttpResponse, ResponseError, Result,
-};
+use actix_web::web::{get, post, resource, scope};
 
 use crate::handlers::{api, web};
 
