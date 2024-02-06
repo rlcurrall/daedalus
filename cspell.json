@@ -3,8 +3,6 @@
   "language": "en",
   "words": [
     "actix",
-    "Apiv",
-    "askama",
     "chrono",
     "clsx",
     "Currall",
@@ -27,6 +25,7 @@
     "simplelog",
     "stylesheet",
     "tailwindcss",
+    "Tera",
     "tsync"
   ]
 }

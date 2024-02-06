@@ -17,6 +17,7 @@ use daedalus::{
     database::{Migrator, PoolManager},
     middleware::session::SessionMiddlewareBuilder,
     routes,
+    views::View,
 };
 
 #[actix_web::main]
@@ -26,6 +27,7 @@ async fn main() -> std::io::Result<()> {
     let app_settings = AppSettings::new().expect("Failed to load settings");
 
     setup_logger(&app_settings.name);
+    View::init()?;
 
     let pool_manager = PoolManager::new(&app_settings.database);
     Migrator::new(pool_manager.get()?)
@@ -43,8 +45,8 @@ async fn main() -> std::io::Result<()> {
                 app_settings.session.clone(),
             ))
             .wrap(TracingLogger::default())
-            .configure(routes::web)
             .configure(routes::api)
+            .configure(routes::web)
     })
     .bind(("0.0.0.0", port))?
     .workers(workers)

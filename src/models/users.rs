@@ -20,6 +20,14 @@ pub struct CreateUser {
     pub password: String,
 }
 
+#[derive(AsChangeset, Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+#[diesel(table_name = users)]
+pub struct UpdateUser {
+    pub email: Option<String>,
+    pub password: Option<String>,
+}
+
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
 #[tsync]
 #[diesel(table_name = users)]
@@ -72,6 +80,14 @@ impl User {
     pub fn create(conn: &mut DbConnection, user: CreateUser) -> Result<User, AppError> {
         Ok(diesel::insert_into(users::table)
             .values(&user)
+            .returning(User::as_returning())
+            .get_result(conn)?)
+    }
+
+    pub fn update(conn: &mut DbConnection, id: i64, user: UpdateUser) -> Result<User, AppError> {
+        Ok(diesel::update(users::table)
+            .filter(users::id.eq(id))
+            .set(&user)
             .returning(User::as_returning())
             .get_result(conn)?)
     }

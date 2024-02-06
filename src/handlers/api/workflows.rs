@@ -46,7 +46,7 @@ pub async fn create(
     Ok(Json(new_workflow))
 }
 
-pub async fn get(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
+pub async fn find(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
         let conn = pool.get()?;

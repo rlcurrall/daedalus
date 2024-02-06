@@ -1,0 +1,32 @@
+{% extends "layouts/default.njk" %}
+
+{% block content %}
+
+{# Nav #}
+<nav class="container-fluid">
+  <ul>
+    <li>
+      <a href="./" class="contrast" onclick="event.preventDefault()">
+        <strong>Brand</strong>
+      </a>
+    </li>
+  </ul>
+  <ul>
+    <li>
+      <a href="/logout">Logout</a>
+    </li>
+  </ul>
+</nav>
+
+<main class="container">
+  <header>
+    <hgroup>
+      <h1>Home</h1>
+      <p>Welcome to the home page</p>
+    </hgroup>
+  </header>
+
+  <p>{{ user.email }}</p>
+</main>
+
+{% endblock %}

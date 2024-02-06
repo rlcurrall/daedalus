@@ -4,10 +4,10 @@ use actix_web::{
     HttpMessage, HttpRequest, Result,
 };
 
-use crate::database::PoolManager;
 use crate::models::users::{CreateUser, User, UserQuery};
 use crate::result::AppError;
 use crate::services::users::{UserCredentials, UserService};
+use crate::{database::PoolManager, models::users::UpdateUser};
 
 pub async fn list(
     _: Identity,
@@ -16,9 +16,7 @@ pub async fn list(
 ) -> Result<Json<Vec<User>>> {
     let users = block(move || {
         let conn = pool.get()?;
-        UserService::new(conn)
-            .list(filter.into())
-            .map_err(|e| Into::<AppError>::into(e))
+        UserService::new(conn).list(filter)
     })
     .await??;
 
@@ -31,13 +29,26 @@ pub async fn create(
 ) -> Result<Json<User>> {
     let new_user = block(move || {
         let conn = pool.get()?;
-        UserService::new(conn)
-            .create(request.into())
-            .map_err(|e| Into::<AppError>::into(e))
+        UserService::new(conn).create(request)
     })
     .await??;
 
     Ok(Json(new_user))
+}
+
+pub async fn update(
+    Json(request): Json<UpdateUser>,
+    id: Path<i64>,
+    pool: Data<PoolManager>,
+) -> Result<Json<User>> {
+    let id = id.into_inner();
+    let updated_user = block(move || {
+        let conn = pool.get()?;
+        UserService::new(conn).update(id, request)
+    })
+    .await??;
+
+    Ok(Json(updated_user))
 }
 
 pub async fn authenticate(
@@ -47,9 +58,7 @@ pub async fn authenticate(
 ) -> Result<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
-        UserService::new(conn)
-            .authenticate(request.into())
-            .map_err(|e| Into::<AppError>::into(e))
+        UserService::new(conn).authenticate(request)
     })
     .await??;
 
@@ -71,11 +80,10 @@ pub async fn me(id: Identity, pool: Data<PoolManager>) -> Result<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn)
-            .find(id.parse().map_err(|_| AppError::Unauthorized)?)
-            .map_err(|e| Into::<AppError>::into(e))
+            .find(id.parse().map_err(|_| AppError::Unauthorized)?)?
+            .ok_or(AppError::Unauthorized)
     })
-    .await??
-    .ok_or(AppError::Unauthorized)?;
+    .await??;
 
     Ok(Json(user))
 }
@@ -84,15 +92,12 @@ pub async fn find(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result
     let id = id.into_inner();
     let user = block(move || {
         let conn = pool.get()?;
-        UserService::new(conn)
-            .find(id)
-            .map_err(|e| Into::<AppError>::into(e))
+        UserService::new(conn).find(id)?.ok_or(AppError::NotFound {
+            entity: "User".to_string(),
+            id: id.to_string(),
+        })
     })
-    .await??
-    .ok_or(AppError::NotFound {
-        entity: "User".to_string(),
-        id: id.to_string(),
-    })?;
+    .await??;
 
     Ok(Json(user))
 }

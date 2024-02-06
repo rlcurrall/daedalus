@@ -4,7 +4,7 @@ use argon2::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::models::users::{CreateUser, User, UserQuery};
+use crate::models::users::{CreateUser, UpdateUser, User, UserQuery};
 use crate::{
     database::PooledConnection,
     result::{AppError, Result},
@@ -72,6 +72,19 @@ impl UserService {
                 cause: format!("User with email {} already exists", email),
             }),
         }
+    }
+
+    pub fn update(&mut self, id: i64, UpdateUser { email, password }: UpdateUser) -> Result<User> {
+        let password = match password {
+            None => None,
+            Some(password) => {
+                let salt = SaltString::generate(&mut OsRng);
+                let argon = Argon2::default();
+                Some(argon.hash_password(password.as_bytes(), &salt)?.to_string())
+            }
+        };
+
+        Ok(User::update(&mut self.conn, id, UpdateUser { email, password })?.into())
     }
 
     pub fn authenticate(

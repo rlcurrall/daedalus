@@ -8,3 +8,4 @@ pub mod models;
 pub mod result;
 pub mod routes;
 pub mod services;
+pub mod views;

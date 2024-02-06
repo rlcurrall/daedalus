@@ -1,6 +1,4 @@
-use actix_web::{error, http::StatusCode, HttpResponse};
 use derive_more::{Display, Error};
-use serde_json::json;
 
 pub type Result<T> = std::result::Result<T, AppError>;
 
@@ -23,32 +21,6 @@ pub enum AppError {
 
     #[display(fmt = "Unauthorized")]
     Unauthorized,
-}
-
-impl error::ResponseError for AppError {
-    fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code()).json(json!({
-            "type": match *self {
-                AppError::ValidationError { .. } => "ValidationError",
-                AppError::ServerError { .. } => "ServerError",
-                AppError::NotFound { .. } => "NotFound",
-                AppError::Forbidden { .. } => "Forbidden",
-                AppError::BadRequest { .. } => "BadRequest",
-                AppError::Unauthorized => "Unauthorized",
-            },
-            "error": self.to_string()
-        }))
-    }
-    fn status_code(&self) -> StatusCode {
-        match *self {
-            AppError::ValidationError { .. } => StatusCode::BAD_REQUEST,
-            AppError::ServerError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-            AppError::NotFound { .. } => StatusCode::NOT_FOUND,
-            AppError::Forbidden { .. } => StatusCode::FORBIDDEN,
-            AppError::BadRequest { .. } => StatusCode::BAD_REQUEST,
-            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
-        }
-    }
 }
 
 impl From<argon2::Error> for AppError {
@@ -126,6 +98,39 @@ impl From<diesel::r2d2::Error> for AppError {
     fn from(e: diesel::r2d2::Error) -> AppError {
         AppError::ServerError {
             cause: e.to_string(),
+        }
+    }
+}
+
+mod api {
+    use actix_web::{error, http::StatusCode, HttpResponse};
+    use serde_json::json;
+
+    use super::AppError;
+
+    impl error::ResponseError for AppError {
+        fn error_response(&self) -> HttpResponse {
+            HttpResponse::build(self.status_code()).json(json!({
+                "type": match *self {
+                    AppError::ValidationError { .. } => "ValidationError",
+                    AppError::ServerError { .. } => "ServerError",
+                    AppError::NotFound { .. } => "NotFound",
+                    AppError::Forbidden { .. } => "Forbidden",
+                    AppError::BadRequest { .. } => "BadRequest",
+                    AppError::Unauthorized => "Unauthorized",
+                },
+                "error": self.to_string()
+            }))
+        }
+        fn status_code(&self) -> StatusCode {
+            match *self {
+                AppError::ValidationError { .. } => StatusCode::BAD_REQUEST,
+                AppError::ServerError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+                AppError::NotFound { .. } => StatusCode::NOT_FOUND,
+                AppError::Forbidden { .. } => StatusCode::FORBIDDEN,
+                AppError::BadRequest { .. } => StatusCode::BAD_REQUEST,
+                AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            }
         }
     }
 }

@@ -1,0 +1,63 @@
+{% extends "layouts/default.njk" %} {% block content %}
+<style>
+  nav {
+    background-color: var(--card-background-color);
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 5rem;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 20rem;
+  }
+</style>
+
+{# Nav #}
+<nav class="container-fluid">
+  <ul>
+    <li>
+      <a href="./" class="contrast" onclick="event.preventDefault()">
+        <strong>Brand</strong>
+      </a>
+    </li>
+  </ul>
+</nav>
+
+{# Main #}
+<main class="container">
+  <header>
+    <hgroup>
+      <h1>Sign in</h1>
+      <p>A minimalist layout for Login pages</p>
+    </hgroup>
+  </header>
+
+  <form method="post" action="/login">
+    <input
+      type="text"
+      name="email"
+      placeholder="Email"
+      aria-label="Email"
+      autocomplete="email"
+      required
+    />
+    <input
+      type="password"
+      name="password"
+      placeholder="Password"
+      aria-label="Password"
+      autocomplete="current-password"
+      required
+    />
+    <button type="submit">Login</button>
+  </form>
+</main>
+{% endblock %}
