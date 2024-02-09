@@ -4,13 +4,16 @@ use actix_web::{
     HttpMessage, HttpRequest, Result,
 };
 
-use crate::models::users::{CreateUser, User, UserQuery};
 use crate::result::AppError;
 use crate::services::users::{UserCredentials, UserService};
 use crate::{database::PoolManager, models::users::UpdateUser};
+use crate::{
+    models::users::{CreateUser, User, UserQuery},
+    UserId,
+};
 
 pub async fn list(
-    _: Identity,
+    _: UserId,
     Query(filter): Query<UserQuery>,
     pool: Data<PoolManager>,
 ) -> Result<Json<Vec<User>>> {
@@ -74,13 +77,11 @@ pub async fn logout(id: Identity) -> Result<Json<()>> {
     Ok(Json(()))
 }
 
-pub async fn me(id: Identity, pool: Data<PoolManager>) -> Result<Json<User>> {
-    let id = id.id().map_err(|_| AppError::Unauthorized)?;
-
+pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> Result<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn)
-            .find(id.parse().map_err(|_| AppError::Unauthorized)?)?
+            .find(id)?
             .ok_or(AppError::Unauthorized)
     })
     .await??;
@@ -88,7 +89,7 @@ pub async fn me(id: Identity, pool: Data<PoolManager>) -> Result<Json<User>> {
     Ok(Json(user))
 }
 
-pub async fn find(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<User>> {
+pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<User>> {
     let id = id.into_inner();
     let user = block(move || {
         let conn = pool.get()?;

@@ -1,16 +1,15 @@
-use actix_identity::Identity;
 use actix_web::{
     web::{block, Data, Json, Path, Query},
     Result,
 };
 
-use crate::database::PoolManager;
 use crate::models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
 use crate::result::AppError;
 use crate::services::tenants::TenantService;
+use crate::{database::PoolManager, UserId};
 
 pub async fn list(
-    _: Identity,
+    _: UserId,
     Query(query): Query<TenantQuery>,
     pool: Data<PoolManager>,
 ) -> Result<Json<Vec<Tenant>>> {
@@ -29,7 +28,7 @@ pub async fn list(
 }
 
 pub async fn create(
-    _: Identity,
+    _: UserId,
     Json(request): Json<CreateTenant>,
     pool: Data<PoolManager>,
 ) -> Result<Json<Tenant>> {
@@ -45,7 +44,7 @@ pub async fn create(
     Ok(Json(new_tenant))
 }
 
-pub async fn find(_: Identity, id: Path<i32>, pool: Data<PoolManager>) -> Result<Json<Tenant>> {
+pub async fn find(_: UserId, id: Path<i32>, pool: Data<PoolManager>) -> Result<Json<Tenant>> {
     let id = id.into_inner();
     let tenant: Tenant = block(move || {
         let conn = pool.get()?;
@@ -64,7 +63,7 @@ pub async fn find(_: Identity, id: Path<i32>, pool: Data<PoolManager>) -> Result
 }
 
 pub async fn update(
-    _: Identity,
+    _: UserId,
     id: Path<i32>,
     Json(request): Json<UpdateTenant>,
     pool: Data<PoolManager>,

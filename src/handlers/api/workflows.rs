@@ -1,4 +1,3 @@
-use actix_identity::Identity;
 use actix_web::{
     web::{block, Data, Json, Path, Query},
     Result,
@@ -12,10 +11,11 @@ use crate::{
     },
     result::AppError,
     services::workflows::WorkflowService,
+    UserId,
 };
 
 pub async fn list(
-    _: Identity,
+    _: UserId,
     Query(filter): Query<WorkflowQuery>,
     pool: Data<PoolManager>,
 ) -> Result<Json<Paginated<Workflow>>> {
@@ -31,7 +31,7 @@ pub async fn list(
 }
 
 pub async fn create(
-    _: Identity,
+    _: UserId,
     Json(request): Json<NewWorkflow>,
     pool: Data<PoolManager>,
 ) -> Result<Json<Workflow>> {
@@ -46,7 +46,7 @@ pub async fn create(
     Ok(Json(new_workflow))
 }
 
-pub async fn find(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
+pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
         let conn = pool.get()?;
@@ -67,7 +67,7 @@ pub async fn find(_: Identity, id: Path<i64>, pool: Data<PoolManager>) -> Result
 }
 
 pub async fn update(
-    _: Identity,
+    _: UserId,
     id: Path<i64>,
     Json(request): Json<UpdateWorkflow>,
     pool: Data<PoolManager>,

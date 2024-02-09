@@ -1,42 +1,27 @@
 use std::sync::Mutex;
 
-use once_cell::sync::OnceCell;
 pub use tera::Context;
 use tera::Tera;
 
 use crate::result::{AppError, Result};
 
-static VIEWS: OnceCell<Mutex<Tera>> = OnceCell::new();
-
-pub struct View;
+pub struct View {
+    views: Mutex<Tera>,
+}
 
 impl View {
-    pub fn init() -> Result<()> {
-        if VIEWS.get().is_some() {
-            return Err(AppError::ServerError {
-                cause: "Views already initialized".to_string(),
-            });
-        }
-
+    pub fn init() -> Result<Self> {
         let tera = Tera::new("views/**/*.njk").map_err(|e| AppError::ServerError {
             cause: e.to_string(),
         })?;
 
-        VIEWS
-            .set(Mutex::new(tera))
-            .map_err(|_| AppError::ServerError {
-                cause: "Could not initialize views".to_string(),
-            })?;
-
-        Ok(())
+        Ok(Self {
+            views: Mutex::new(tera),
+        })
     }
 
-    pub fn render(name: &str, context: &tera::Context) -> Result<String> {
-        VIEWS
-            .get()
-            .ok_or(AppError::ServerError {
-                cause: format!("Views not initialized"),
-            })?
+    pub fn render(&self, name: &str, context: &tera::Context) -> Result<String> {
+        self.views
             .lock()
             .map_err(|e| AppError::ServerError {
                 cause: format!("Failed to render view: {}", e),
@@ -47,15 +32,23 @@ impl View {
             })
     }
 
-    pub fn reload() -> Result<()> {
-        VIEWS
-            .get()
-            .ok_or(AppError::ServerError {
-                cause: format!("Views not initialized"),
-            })?
+    pub fn one_off(&self, template: &str, context: &tera::Context) -> Result<String> {
+        self.views
             .lock()
             .map_err(|e| AppError::ServerError {
                 cause: format!("Failed to render view: {}", e),
+            })?
+            .render_str(template, context)
+            .map_err(|e| AppError::ServerError {
+                cause: format!("Failed to render view: {}", e),
+            })
+    }
+
+    pub fn reload(&self) -> Result<()> {
+        self.views
+            .lock()
+            .map_err(|e| AppError::ServerError {
+                cause: format!("Failed to reload views: {}", e),
             })?
             .full_reload()
             .map_err(|e| AppError::ServerError {
