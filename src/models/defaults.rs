@@ -38,12 +38,20 @@ pub const fn default_u8<const V: u8>() -> u8 {
     V
 }
 
+pub const fn default_usize<const V: usize>() -> usize {
+    V
+}
+
 pub const fn default_bool<const V: bool>() -> bool {
     V
 }
 
 pub const fn default_char<const V: char>() -> char {
     V
+}
+
+pub const fn default_duration<const V: u64>() -> std::time::Duration {
+    std::time::Duration::from_secs(V)
 }
 
 pub fn default_from_i128<T: From<i128>, const V: i128>() -> T {

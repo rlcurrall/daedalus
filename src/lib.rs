@@ -12,9 +12,9 @@ pub mod handlers;
 pub mod middleware;
 pub mod models;
 pub mod result;
-pub mod routes;
+pub mod server;
 pub mod services;
-pub mod views;
+pub mod tmpl;
 
 pub struct UserId(i64);
 
@@ -31,6 +31,6 @@ impl FromRequest for UserId {
             }
         }
 
-        return ready(Err(AppError::Unauthorized));
+        ready(Err(AppError::Unauthorized))
     }
 }

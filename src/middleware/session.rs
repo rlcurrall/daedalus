@@ -6,12 +6,12 @@ use crate::config::SessionSettings;
 pub struct SessionMiddlewareBuilder;
 
 impl SessionMiddlewareBuilder {
-    pub fn build(settings: SessionSettings) -> SessionMiddleware<CookieSessionStore> {
+    pub fn build(settings: &SessionSettings) -> SessionMiddleware<CookieSessionStore> {
         SessionMiddleware::builder(
             CookieSessionStore::default(),
             Key::from(&settings.secret.as_bytes()),
         )
-        .cookie_secure(settings.secure)
+        .cookie_secure(settings.secure.clone())
         .session_lifecycle(
             PersistentSession::default()
                 .session_ttl(Duration::seconds(settings.lifetime.as_secs() as i64)),

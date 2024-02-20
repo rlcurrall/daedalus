@@ -1,0 +1,46 @@
+{% extends "layouts/default.njk" %}
+
+{% block content %}
+
+<main class="container">
+  <aside>
+    <nav>
+      <ul>
+        <li>
+          ASDF
+        </li>
+        <li>
+          <a href="/home">Home</a>
+        </li>
+        <li>
+          <a href="/profile">Profile</a>
+        </li>
+        <li>
+          <a href="/logout">Logout</a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <header>
+    <hgroup>
+      <h1>Home</h1>
+      <p>Welcome to the home page</p>
+    </hgroup>
+  </header>
+
+  <p>{{ user.email }}</p>
+
+  {# lorem ipsum #}
+  <p>
+    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Voluptas quidem, facere, numquam, quaerat iste soluta delectus cumque non error nisi tempore eligendi asperiores quos architecto totam est vero! Doloremque, corrupti.
+  </p>
+
+  <article>
+    <p>
+      Lorem ipsum dolor sit amet consectetur, adipisicing elit. Voluptas quidem, facere, numquam, quaerat iste soluta delectus cumque non error nisi tempore eligendi asperiores quos architecto totam est vero! Doloremque, corrupti.
+    </p>
+  </article>
+</main>
+
+{% endblock %}

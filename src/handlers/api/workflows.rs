@@ -1,7 +1,4 @@
-use actix_web::{
-    web::{block, Data, Json, Path, Query},
-    Result,
-};
+use actix_web::web::{block, Data, Json, Path, Query};
 
 use crate::{
     database::PoolManager,
@@ -9,7 +6,7 @@ use crate::{
         common::Paginated,
         workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery},
     },
-    result::AppError,
+    result::{AppError, JsonResult},
     services::workflows::WorkflowService,
     UserId,
 };
@@ -18,12 +15,10 @@ pub async fn list(
     _: UserId,
     Query(filter): Query<WorkflowQuery>,
     pool: Data<PoolManager>,
-) -> Result<Json<Paginated<Workflow>>> {
+) -> JsonResult<Json<Paginated<Workflow>>> {
     let workflows = block(move || {
         let conn = pool.get()?;
-        WorkflowService::new(conn)
-            .paginate(filter.into())
-            .map_err(|e| Into::<AppError>::into(e))
+        WorkflowService::new(conn).paginate(filter.into())
     })
     .await??;
 
@@ -34,25 +29,21 @@ pub async fn create(
     _: UserId,
     Json(request): Json<NewWorkflow>,
     pool: Data<PoolManager>,
-) -> Result<Json<Workflow>> {
+) -> JsonResult<Json<Workflow>> {
     let new_workflow = block(move || {
         let conn = pool.get()?;
-        WorkflowService::new(conn)
-            .create(request.into())
-            .map_err(|e| Into::<AppError>::into(e))
+        WorkflowService::new(conn).create(request.into())
     })
     .await??;
 
     Ok(Json(new_workflow))
 }
 
-pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<Workflow>> {
+pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
         let conn = pool.get()?;
-        WorkflowService::new(conn)
-            .find(id)
-            .map_err(|e| Into::<AppError>::into(e))
+        WorkflowService::new(conn).find(id)
     })
     .await??;
 
@@ -71,13 +62,11 @@ pub async fn update(
     id: Path<i64>,
     Json(request): Json<UpdateWorkflow>,
     pool: Data<PoolManager>,
-) -> Result<Json<Workflow>> {
+) -> JsonResult<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
         let conn = pool.get()?;
-        WorkflowService::new(conn)
-            .update(id, request)
-            .map_err(|e| Into::<AppError>::into(e))
+        WorkflowService::new(conn).update(id, request)
     })
     .await??;
 

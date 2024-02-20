@@ -1,4 +1,4 @@
-name = "daedalus_api"
+name = "daedalus"
 debug = true
 
 [database]
@@ -10,7 +10,7 @@ thread_pool_size = 3
 
 [server]
 port = 8080
-workers = 8
+workers = 4
 
 [session]
 # To generate a new key run the following command:
@@ -18,3 +18,7 @@ workers = 8
 secret = "q44esU/fa/yvH8nXZ35NVN1rlF9esy+ipGwxIZ8og/go6Dmj7nztmANsxSY+CUthaDjnRIjPtt2/ukXEqPrRig=="
 secure = false
 lifetime = 7200
+
+[log]
+level = "debug"
+format = "pretty"

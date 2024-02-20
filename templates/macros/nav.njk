@@ -1,0 +1,74 @@
+{% macro header() %}
+
+<style>
+  /* header.header-navbar {
+    background-color: var(--pico-background-color);
+    border-bottom: var(--pico-border-width) solid var(--pico-form-element-border-color);
+  }
+
+  header.header-navbar details.hamburger > summary::after {
+    background-image: var(--pico-icon-hamburger);
+    margin: 0;
+    margin-top: 3px;
+  }
+
+  header.header-navbar details.hamburger[open] > summary::after {
+    background-image: var(--pico-icon-close);
+  }
+
+  @media (max-width: 768px) {
+    header.header-navbar {
+      position: sticky;
+      top: 0;
+    }
+
+    header.header-navbar details.dropdown ul {
+      position: fixed;
+      top: 80px;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      gap: 1rem;
+    }
+  } */
+</style>
+
+  <nav class="container">
+    <ul>
+      <li>
+        <strong>{{ title }}</strong>
+      </li>
+    </ul>
+    {% if user %}
+      <ul>
+        <li>
+          <details class="dropdown hamburger">
+            <summary>
+              <span class="sr-only">Menu</span>
+            </summary>
+            <ul dir="rtl">
+              <li>
+                <a href="/home">Home</a>
+              </li>
+              <li>
+                <a href="/profile">Profile</a>
+              </li>
+              <li>
+                <a href="/logout">Logout</a>
+              </li>
+            </ul>
+          </details>
+        </li>
+      </ul>
+    {% else %}
+      <ul>
+        <li>
+          <a href="/login">Login</a>
+        </li>
+      </ul>
+    {% endif %}
+    </details>
+  </nav>
+
+{% endmacro %}

@@ -10,12 +10,14 @@
     "dagrejs",
     "dotenv",
     "dotenvy",
+    "endmacro",
     "graphlib",
     "Hasher",
     "headlessui",
     "heroicons",
     "HTMX",
     "Insertable",
+    "lexopt",
     "Pico",
     "rankdir",
     "reactflow",
@@ -26,6 +28,7 @@
     "stylesheet",
     "tailwindcss",
     "Tera",
+    "tmpl",
     "tsync"
   ]
 }

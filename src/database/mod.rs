@@ -1,10 +1,8 @@
 use diesel::{r2d2, PgConnection};
 
-mod migrator;
 mod pool;
 pub mod schema;
 
-pub use migrator::Migrator;
 pub use pool::PoolManager;
 
 pub type DB = diesel::pg::Pg;

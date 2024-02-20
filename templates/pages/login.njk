@@ -1,9 +1,7 @@
-{% extends "layouts/default.njk" %} {% block content %}
-<style>
-  nav {
-    background-color: var(--card-background-color);
-  }
+{% extends "layouts/default.njk" %}
 
+{% block content %}
+<style>
   main {
     display: flex;
     flex-direction: column;
@@ -19,17 +17,6 @@
     max-width: 20rem;
   }
 </style>
-
-{# Nav #}
-<nav class="container-fluid">
-  <ul>
-    <li>
-      <a href="./" class="contrast" onclick="event.preventDefault()">
-        <strong>Brand</strong>
-      </a>
-    </li>
-  </ul>
-</nav>
 
 {# Main #}
 <main class="container">

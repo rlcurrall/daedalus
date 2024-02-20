@@ -2,44 +2,36 @@ use actix_web::{
     web::{block, Data},
     HttpResponse,
 };
-use tracing::error;
 
 use crate::{
     database::PoolManager,
     models::users::User,
-    result::AppError,
+    result::{AppError, HtmlResult},
     services::users::UserService,
-    views::{Context, View},
+    tmpl::{Context, Tmpl},
     UserId,
 };
 
-pub async fn index(id: Option<UserId>, pool: Data<PoolManager>, views: Data<View>) -> HttpResponse {
-    if let Err(e) = views.reload() {
-        error!("Failed to reload views: {}", e);
-        return HttpResponse::InternalServerError().finish();
-    }
+pub async fn index(
+    id: Option<UserId>,
+    pool: Data<PoolManager>,
+    tmpl: Data<Tmpl>,
+) -> HtmlResult<HttpResponse> {
+    let _ = tmpl.reload();
 
     let mut context = Context::new();
+    context.insert("title", "Daedalus");
 
     if let Some(UserId(id)) = id {
-        let user = match get_user(id, pool).await {
-            Ok(user) => user,
-            Err(e) => {
-                error!("Failed to get user: {}", e);
-                return HttpResponse::InternalServerError().finish();
-            }
-        };
-
-        context.insert("user", &user);
+        get_user(id, pool)
+            .await
+            .ok()
+            .map(|user| context.insert("user", &user));
     };
 
-    match views.render("pages/index.njk", &context) {
-        Ok(body) => HttpResponse::Ok().body(body),
-        Err(e) => {
-            error!("Failed to render view: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    let body = tmpl.render("pages/index.njk", &context)?;
+
+    Ok(HttpResponse::Ok().body(body))
 }
 
 async fn get_user(id: i64, pool: Data<PoolManager>) -> crate::result::Result<User> {
@@ -47,7 +39,6 @@ async fn get_user(id: i64, pool: Data<PoolManager>) -> crate::result::Result<Use
         let conn = pool.get()?;
         UserService::new(conn).find(id)
     })
-    .await
-    .map_err(|_| AppError::Unauthorized)??
+    .await??
     .ok_or(AppError::Unauthorized)
 }

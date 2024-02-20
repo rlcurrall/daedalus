@@ -1,17 +1,16 @@
 use actix_identity::Identity;
 use actix_web::{
     web::{block, Data, Form},
-    HttpMessage, HttpRequest, HttpResponse, Result,
+    HttpMessage, HttpRequest, HttpResponse,
 };
 use serde::Deserialize;
-use tracing::error;
 
 use crate::{
     database::PoolManager,
     models::users::User,
-    result::AppError,
+    result::HtmlResult,
     services::users::{UserCredentials, UserService},
-    views::{Context, View},
+    tmpl::{Context, Tmpl},
     UserId,
 };
 
@@ -21,63 +20,48 @@ pub struct LoginFormData {
     pub password: String,
 }
 
-pub async fn show_login(id: Option<UserId>, views: Data<View>) -> HttpResponse {
+pub async fn show_login(id: Option<UserId>, tmpl: Data<Tmpl>) -> HtmlResult<HttpResponse> {
+    let _ = tmpl.reload();
+
     if id.is_some() {
-        return HttpResponse::Found()
+        return Ok(HttpResponse::Found()
             .append_header(("location", "/home"))
-            .finish();
+            .finish());
     }
 
-    match views.render("pages/login.njk", &Context::new()) {
-        Ok(body) => HttpResponse::Ok().body(body),
-        Err(e) => {
-            error!("Failed to render view: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    let mut context = Context::new();
+    context.insert("title", "Login");
+    let body = tmpl.render("pages/login.njk", &context)?;
+
+    Ok(HttpResponse::Ok().body(body))
 }
 
 pub async fn login(
     form: Form<LoginFormData>,
     req: HttpRequest,
     pool: Data<PoolManager>,
-) -> HttpResponse {
-    let user = match authenticate_user(form.into_inner(), pool).await {
-        Ok(user) => user,
-        Err(e) => {
-            error!("Failed to authenticate user: {}", e);
-            return HttpResponse::Found()
-                .append_header(("location", "/login"))
-                .finish();
-        }
-    };
+) -> HtmlResult<HttpResponse> {
+    let user = authenticate_user(form.into_inner(), pool).await?;
 
-    if let Err(e) =
-        Identity::login(&req.extensions(), user.id.to_string()).map_err(|e| AppError::ServerError {
-            cause: format!("Failed to set identity: {}", e),
-        })
-    {
-        error!("Failed to set identity: {}", e);
-        return HttpResponse::InternalServerError().finish();
-    }
+    Identity::login(&req.extensions(), user.id.to_string())?;
 
-    HttpResponse::Found()
+    Ok(HttpResponse::Found()
         .append_header(("location", "/home"))
-        .finish()
+        .finish())
 }
 
-pub async fn logout(id: Identity) -> Result<HttpResponse> {
-    id.logout();
+pub async fn logout(id: Option<Identity>) -> HtmlResult<HttpResponse> {
+    if let Some(id) = id {
+        id.logout()
+    }
+
     Ok(HttpResponse::Found()
         .append_header(("location", "/"))
         .finish())
 }
 
-async fn authenticate_user(
-    form: LoginFormData,
-    pool: Data<PoolManager>,
-) -> crate::result::Result<User> {
-    block(move || {
+async fn authenticate_user(form: LoginFormData, pool: Data<PoolManager>) -> HtmlResult<User> {
+    Ok(block(move || {
         let conn = pool.get()?;
         UserService::new(conn).authenticate(UserCredentials {
             tenant_id: 1,
@@ -85,6 +69,5 @@ async fn authenticate_user(
             password: form.password.clone(),
         })
     })
-    .await
-    .map_err(|_| AppError::Unauthorized)?
+    .await??)
 }

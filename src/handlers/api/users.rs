@@ -1,10 +1,10 @@
 use actix_identity::Identity;
 use actix_web::{
     web::{block, Data, Json, Path, Query},
-    HttpMessage, HttpRequest, Result,
+    HttpMessage, HttpRequest,
 };
 
-use crate::result::AppError;
+use crate::result::{AppError, JsonResult};
 use crate::services::users::{UserCredentials, UserService};
 use crate::{database::PoolManager, models::users::UpdateUser};
 use crate::{
@@ -16,7 +16,7 @@ pub async fn list(
     _: UserId,
     Query(filter): Query<UserQuery>,
     pool: Data<PoolManager>,
-) -> Result<Json<Vec<User>>> {
+) -> JsonResult<Json<Vec<User>>> {
     let users = block(move || {
         let conn = pool.get()?;
         UserService::new(conn).list(filter)
@@ -29,7 +29,7 @@ pub async fn list(
 pub async fn create(
     Json(request): Json<CreateUser>,
     pool: Data<PoolManager>,
-) -> Result<Json<User>> {
+) -> JsonResult<Json<User>> {
     let new_user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn).create(request)
@@ -43,7 +43,7 @@ pub async fn update(
     Json(request): Json<UpdateUser>,
     id: Path<i64>,
     pool: Data<PoolManager>,
-) -> Result<Json<User>> {
+) -> JsonResult<Json<User>> {
     let id = id.into_inner();
     let updated_user = block(move || {
         let conn = pool.get()?;
@@ -58,26 +58,24 @@ pub async fn authenticate(
     Json(request): Json<UserCredentials>,
     pool: Data<PoolManager>,
     req: HttpRequest,
-) -> Result<Json<User>> {
+) -> JsonResult<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn).authenticate(request)
     })
     .await??;
 
-    Identity::login(&req.extensions(), user.id.to_string()).map_err(|e| AppError::ServerError {
-        cause: format!("Failed to set identity: {}", e),
-    })?;
+    Identity::login(&req.extensions(), user.id.to_string())?;
 
     Ok(Json(user))
 }
 
-pub async fn logout(id: Identity) -> Result<Json<()>> {
+pub async fn logout(id: Identity) -> JsonResult<Json<()>> {
     id.logout();
     Ok(Json(()))
 }
 
-pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> Result<Json<User>> {
+pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn)
@@ -89,7 +87,7 @@ pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> Result<Json<User
     Ok(Json(user))
 }
 
-pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> Result<Json<User>> {
+pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let id = id.into_inner();
     let user = block(move || {
         let conn = pool.get()?;
