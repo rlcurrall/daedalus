@@ -1,0 +1,73 @@
+:root {
+  --pico-icon-hamburger: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2724%27%20height%3D%2724%27%20viewBox%3D%27002424%27%20fill%3D%27none%27%20stroke%3D%27rgb%28136%2C145%2C164%29%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M3.75%206.75h16.5M3.75%2012h16.5m-16.5%205.25h16.5%22%20%2F%3E%3C%2Fsvg%3E");
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+body {
+  display: grid;
+  min-height: 100vh;
+  height: 100vh;
+  grid-template-areas:
+    "aside header"
+    "aside main";
+  grid-template-columns: 20% 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+body > header {
+  --pico-block-spacing-vertical: 0;
+  grid-area: header;
+  background-color: var(--pico-background-color);
+  border-bottom: var(--pico-border-width) solid
+    var(--pico-form-element-border-color);
+}
+
+#side-nav {
+  height: 100vh;
+  grid-area: aside;
+  background-color: var(--pico-background-color);
+  border-right: var(--pico-border-width) solid
+    var(--pico-form-element-border-color);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+body > main {
+  overflow-y: auto;
+  grid-area: main;
+}
+
+#logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 50px;
+  height: 50px;
+}
+
+:root:not([data-theme=dark]),[data-theme=light] article.error {
+  --pico-card-background-color: var(--pico-color-red-100);
+}
+
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) article.error {
+    --pico-card-background-color: var(--pico-color-red-500);
+  }
+}
+
+[data-theme="dark"] article.error {
+  --pico-card-background-color: var(--pico-color-red-500);
+}

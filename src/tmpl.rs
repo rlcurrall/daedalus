@@ -25,9 +25,9 @@ impl Tmpl {
 
         let version_c1 = version.clone();
         templates.register_function("version", move |_: &HashMap<String, Value>| {
-            let version = version_c1.clone();
-            Ok(Value::String(version))
+            Ok(Value::String(version_c1.clone()))
         });
+
         templates.register_function("asset_path", move |args: &HashMap<String, Value>| {
             let name = args.get("name").and_then(Value::as_str).unwrap_or("");
             let version = version.clone();

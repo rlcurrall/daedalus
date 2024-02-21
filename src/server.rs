@@ -11,7 +11,10 @@ use crate::{
     config::{AppSettings, ServerSettings},
     database::PoolManager,
     handlers::{api, web},
-    middleware::session::SessionMiddlewareBuilder,
+    middleware::{
+        flash_messages::{FlashMiddlewareBuilder, SessionMessageStore},
+        session::SessionMiddlewareBuilder,
+    },
     tmpl::Tmpl,
 };
 
@@ -30,6 +33,7 @@ pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Erro
             .app_data(Data::new(pool_manager.clone()))
             .app_data(Data::new(templates.clone()))
             .wrap(IdentityMiddleware::default())
+            .wrap(FlashMiddlewareBuilder::new(SessionMessageStore::default()))
             .wrap(SessionMiddlewareBuilder::build(&settings.session))
             .wrap(NormalizePath::trim())
             .wrap(Compress::default())

@@ -7,20 +7,25 @@ use serde::Deserialize;
 
 use crate::{
     database::PoolManager,
+    middleware::flash_messages::{Flash, IncomingFlashMessages},
     models::users::User,
-    result::HtmlResult,
+    result::{AppError, HtmlResult},
     services::users::{UserCredentials, UserService},
     tmpl::{Context, Tmpl},
     UserId,
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct LoginFormData {
     pub email: String,
     pub password: String,
 }
 
-pub async fn show_login(id: Option<UserId>, tmpl: Data<Tmpl>) -> HtmlResult<HttpResponse> {
+pub async fn show_login(
+    id: Option<UserId>,
+    tmpl: Data<Tmpl>,
+    inbox: IncomingFlashMessages,
+) -> HtmlResult<HttpResponse> {
     let _ = tmpl.reload();
 
     if id.is_some() {
@@ -31,6 +36,9 @@ pub async fn show_login(id: Option<UserId>, tmpl: Data<Tmpl>) -> HtmlResult<Http
 
     let mut context = Context::new();
     context.insert("title", "Login");
+    context.insert("messages", inbox.messages());
+    context.insert("errors", inbox.errors());
+    context.insert("data", inbox.data());
     let body = tmpl.render("pages/login.njk", &context)?;
 
     Ok(HttpResponse::Ok().body(body))
@@ -41,7 +49,22 @@ pub async fn login(
     req: HttpRequest,
     pool: Data<PoolManager>,
 ) -> HtmlResult<HttpResponse> {
-    let user = authenticate_user(form.into_inner(), pool).await?;
+    let user = match authenticate_user(form.clone(), pool).await {
+        Ok(user) => user,
+        Err(e) => match e.0.clone() {
+            AppError::ServerError { cause } => {
+                tracing::error!("Failed to authenticate user: {}", cause);
+                return Err(e);
+            }
+            _ => {
+                Flash::error("email".into(), "Invalid email or password".into()).send()?;
+                Flash::data("email".into(), form.email.to_owned()).send()?;
+                return Ok(HttpResponse::Found()
+                    .append_header(("location", "/login"))
+                    .finish());
+            }
+        },
+    };
 
     Identity::login(&req.extensions(), user.id.to_string())?;
 

@@ -9,7 +9,7 @@ use serde_json::json;
 
 pub type Result<T> = std::result::Result<T, AppError>;
 
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Debug, Display, Error)]
 pub enum AppError {
     #[display(fmt = "{}", cause)]
     BadRequest { cause: String },
@@ -261,7 +261,7 @@ impl From<LoginError> for JsonErrorResponse {
     }
 }
 
-#[derive(Debug, Display)]
+#[derive(Clone, Debug, Display)]
 pub struct HtmlErrorResponse(pub AppError);
 pub type HtmlResult<T> = std::result::Result<T, HtmlErrorResponse>;
 

@@ -27,6 +27,12 @@
     </hgroup>
   </header>
 
+  {% if errors.email %}
+  <article class="error">
+    {{ errors.email }}
+  </article>
+  {% endif %}
+
   <form method="post" action="/login">
     <input
       type="text"
@@ -35,6 +41,12 @@
       aria-label="Email"
       autocomplete="email"
       required
+      {% if errors.email %}
+      value="{{ data.email }}"
+      {% endif %}
+      {% if errors.email %}
+      aria-invalid="true"
+      {% endif %}
     />
     <input
       type="password"
@@ -43,6 +55,9 @@
       aria-label="Password"
       autocomplete="current-password"
       required
+      {% if errors.email %}
+      aria-invalid="true"
+      {% endif %}
     />
     <button type="submit">Login</button>
   </form>
