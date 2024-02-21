@@ -12,17 +12,17 @@ use actix_web::{FromRequest, HttpMessage, HttpRequest};
 use crate::result::AppError;
 
 tokio::task_local! {
-    static MAILBOX: Mailbox;
+    static MAILBOX: FlashMailbox;
 }
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
-pub struct Mailbox {
+pub struct FlashMailbox {
     pub(self) messages: RefCell<HashMap<String, String>>,
     pub(self) errors: RefCell<HashMap<String, String>>,
     pub(self) data: RefCell<HashMap<String, String>>,
 }
 
-impl Mailbox {
+impl FlashMailbox {
     pub(self) fn new() -> Self {
         Self {
             messages: RefCell::new(HashMap::new()),
@@ -38,18 +38,18 @@ impl Mailbox {
     }
 }
 
-impl Default for Mailbox {
+impl Default for FlashMailbox {
     fn default() -> Self {
         Self::new()
     }
 }
 
-pub struct FlashMessagesMiddleware<S> {
+pub struct FlashTransform<S> {
     service: S,
-    storage_backend: Arc<dyn FlashMessageStore>,
+    storage_backend: Arc<dyn FlashStore>,
 }
 
-impl<S, B> Service<ServiceRequest> for FlashMessagesMiddleware<S>
+impl<S, B> Service<ServiceRequest> for FlashTransform<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error>,
     S::Future: 'static,
@@ -62,7 +62,7 @@ where
     actix_web::dev::forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let mailbox = Mailbox::new();
+        let mailbox = FlashMailbox::new();
         req.extensions_mut().insert(self.storage_backend.clone());
         // Working with task-locals in actix-web middlewares is a bit annoying.
         // We need to make the task local value available to the rest of the middleware chain, which
@@ -96,58 +96,42 @@ where
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq)]
-enum FlashType {
-    Message,
-    Error,
-    Data,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct Flash {
-    key: String,
-    content: String,
-    flash_type: FlashType,
-}
+pub struct Flash;
 
 impl Flash {
-    pub fn message(key: String, content: String) -> Result<(), AppError> {
+    pub fn message(key: &str, content: String) -> Result<(), AppError> {
         MAILBOX
             .try_with(|mailbox| {
-                mailbox.messages.borrow_mut().insert(key, content);
+                mailbox.messages.borrow_mut().insert(key.into(), content);
             })
             .map_err(|e| AppError::server_error(e))
     }
 
-    pub fn error(key: String, content: String) -> Result<(), AppError> {
+    pub fn error(key: &str, content: String) -> Result<(), AppError> {
         MAILBOX
             .try_with(|mailbox| {
-                mailbox.errors.borrow_mut().insert(key, content);
+                mailbox.errors.borrow_mut().insert(key.into(), content);
             })
             .map_err(|e| AppError::server_error(e))
     }
 
-    pub fn data(key: String, content: String) -> Result<(), AppError> {
+    pub fn data(key: &str, content: String) -> Result<(), AppError> {
         MAILBOX
             .try_with(|mailbox| {
-                mailbox.data.borrow_mut().insert(key, content);
+                mailbox.data.borrow_mut().insert(key.into(), content);
             })
             .map_err(|e| AppError::server_error(e))
-    }
-
-    pub fn content(&self) -> &str {
-        &self.content
     }
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct IncomingFlashMessages {
+pub struct FlashInbox {
     messages: HashMap<String, String>,
     errors: HashMap<String, String>,
     data: HashMap<String, String>,
 }
 
-impl IncomingFlashMessages {
+impl FlashInbox {
     pub fn messages(&self) -> &HashMap<String, String> {
         &self.messages
     }
@@ -161,7 +145,7 @@ impl IncomingFlashMessages {
     }
 }
 
-impl FromRequest for IncomingFlashMessages {
+impl FromRequest for FlashInbox {
     type Error = actix_web::Error;
     type Future = std::future::Ready<Result<Self, Self::Error>>;
 
@@ -170,11 +154,11 @@ impl FromRequest for IncomingFlashMessages {
     }
 }
 
-fn extract_flash_messages(req: &HttpRequest) -> Result<IncomingFlashMessages, actix_web::Error> {
+fn extract_flash_messages(req: &HttpRequest) -> Result<FlashInbox, actix_web::Error> {
     let message_store = req.extensions()
-        .get::<Arc<dyn FlashMessageStore>>()
+        .get::<Arc<dyn FlashStore>>()
         .ok_or(AppError::server_error("Failed to retrieve flash messages!\n\
-            To use the `IncomingFlashMessages` extractor you need to add `FlashMessageFramework` as a middleware \
+            To use the `IncomingFlashes` extractor you need to add `FlashMiddleware` as a middleware \
             on your `actix-web` application using `wrap`. Check out `actix-web-flash-messages`'s documentation for more details."))?
         // Cloning here is necessary in order to drop our reference to the request extensions.
         // Some of the methods on `req` will in turn try to use `req.extensions_mut()`, leading to a borrow
@@ -183,7 +167,7 @@ fn extract_flash_messages(req: &HttpRequest) -> Result<IncomingFlashMessages, ac
 
     message_store
         .load(req)
-        .map(|m| IncomingFlashMessages {
+        .map(|m| FlashInbox {
             messages: m.messages.into_inner(),
             errors: m.errors.into_inner(),
             data: m.data.into_inner(),
@@ -191,29 +175,29 @@ fn extract_flash_messages(req: &HttpRequest) -> Result<IncomingFlashMessages, ac
         .map_err(|e| actix_web::error::InternalError::new(e, StatusCode::BAD_REQUEST).into())
 }
 
-pub trait FlashMessageStore: Send + Sync {
-    fn load(&self, request: &HttpRequest) -> Result<Mailbox, AppError>;
+pub trait FlashStore: Send + Sync {
+    fn load(&self, request: &HttpRequest) -> Result<FlashMailbox, AppError>;
 
     fn store(
         &self,
-        mailbox: &Mailbox,
+        mailbox: &FlashMailbox,
         request: HttpRequest,
         response: &mut ResponseHead,
     ) -> Result<(), AppError>;
 }
 
 #[derive(Clone)]
-pub struct SessionMessageStore {
+pub struct SessionStore {
     key: String,
 }
 
-impl SessionMessageStore {
+impl SessionStore {
     pub fn new(key: String) -> Self {
         Self { key }
     }
 }
 
-impl Default for SessionMessageStore {
+impl Default for SessionStore {
     fn default() -> Self {
         Self {
             key: "_flash".into(),
@@ -221,8 +205,8 @@ impl Default for SessionMessageStore {
     }
 }
 
-impl FlashMessageStore for SessionMessageStore {
-    fn load(&self, request: &HttpRequest) -> Result<Mailbox, AppError> {
+impl FlashStore for SessionStore {
+    fn load(&self, request: &HttpRequest) -> Result<FlashMailbox, AppError> {
         let session = request.get_session();
         let mailbox = session
             .get(&self.key)
@@ -233,7 +217,7 @@ impl FlashMessageStore for SessionMessageStore {
 
     fn store(
         &self,
-        mailbox: &Mailbox,
+        mailbox: &FlashMailbox,
         request: HttpRequest,
         _response: &mut ResponseHead,
     ) -> Result<(), AppError> {
@@ -253,19 +237,19 @@ impl FlashMessageStore for SessionMessageStore {
 }
 
 #[derive(Clone)]
-pub struct FlashMiddlewareBuilder {
-    pub(crate) storage_backend: Arc<dyn FlashMessageStore>,
+pub struct FlashMiddleware {
+    pub(self) storage_backend: Arc<dyn FlashStore>,
 }
 
-impl FlashMiddlewareBuilder {
-    pub fn new<S: FlashMessageStore + 'static>(storage_backend: S) -> Self {
+impl FlashMiddleware {
+    pub fn new<S: FlashStore + 'static>(storage_backend: S) -> Self {
         Self {
             storage_backend: Arc::new(storage_backend),
         }
     }
 }
 
-impl<S, B> Transform<S, ServiceRequest> for FlashMiddlewareBuilder
+impl<S, B> Transform<S, ServiceRequest> for FlashMiddleware
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error>,
     S::Future: 'static,
@@ -273,12 +257,12 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = actix_web::Error;
-    type Transform = FlashMessagesMiddleware<S>;
+    type Transform = FlashTransform<S>;
     type InitError = ();
     type Future = std::future::Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        std::future::ready(Ok(FlashMessagesMiddleware {
+        std::future::ready(Ok(FlashTransform {
             service,
             storage_backend: self.storage_backend.clone(),
         }))

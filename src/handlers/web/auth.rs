@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::{
     database::PoolManager,
-    middleware::flash_messages::{Flash, IncomingFlashMessages},
+    middleware::flash_messages::{Flash, FlashInbox},
     models::users::User,
     result::{AppError, HtmlResult},
     services::users::{UserCredentials, UserService},
@@ -24,7 +24,7 @@ pub struct LoginFormData {
 pub async fn show_login(
     id: Option<UserId>,
     tmpl: Data<Tmpl>,
-    inbox: IncomingFlashMessages,
+    inbox: FlashInbox,
 ) -> HtmlResult<HttpResponse> {
     let _ = tmpl.reload();
 
@@ -57,8 +57,8 @@ pub async fn login(
                 return Err(e);
             }
             _ => {
-                Flash::error("email".into(), "Invalid email or password".into())?;
-                Flash::data("email".into(), form.email.to_owned())?;
+                Flash::error("email", "Invalid email or password".into())?;
+                Flash::data("email", form.email.to_owned())?;
                 return Ok(HttpResponse::Found()
                     .append_header(("location", "/login"))
                     .finish());
