@@ -12,18 +12,18 @@ use actix_web::{FromRequest, HttpMessage, HttpRequest};
 use crate::result::AppError;
 
 tokio::task_local! {
-    static OUTGOING_MAILBOX: OutgoingMailbox;
+    static MAILBOX: Mailbox;
 }
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
-pub struct OutgoingMailbox {
+pub struct Mailbox {
     pub(self) messages: RefCell<HashMap<String, String>>,
     pub(self) errors: RefCell<HashMap<String, String>>,
     pub(self) data: RefCell<HashMap<String, String>>,
 }
 
-impl OutgoingMailbox {
-    pub fn new() -> Self {
+impl Mailbox {
+    pub(self) fn new() -> Self {
         Self {
             messages: RefCell::new(HashMap::new()),
             errors: RefCell::new(HashMap::new()),
@@ -31,12 +31,12 @@ impl OutgoingMailbox {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(self) fn is_empty(&self) -> bool {
         self.messages.borrow().is_empty() && self.errors.borrow().is_empty()
     }
 }
 
-impl Default for OutgoingMailbox {
+impl Default for Mailbox {
     fn default() -> Self {
         Self::new()
     }
@@ -61,21 +61,20 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         req.extensions_mut().insert(self.storage_backend.clone());
-        let outgoing_mailbox = OutgoingMailbox::new();
+        let mailbox = Mailbox::new();
         // Working with task-locals in actix-web middlewares is a bit annoying.
         // We need to make the task local value available to the rest of the middleware chain, which
         // generates the `future` which will in turn return us a response.
         // This generation process is synchronous, so we must use `sync_scope`.
-        let future =
-            OUTGOING_MAILBOX.sync_scope(outgoing_mailbox.clone(), move || self.service.call(req));
+        let future = MAILBOX.sync_scope(mailbox.clone(), move || self.service.call(req));
         // We can then make the task local value available to the asynchronous execution context
         // using `scope` without losing the messages that might have been recorded by the middleware
         // chain.
         let storage_backend = self.storage_backend.clone();
-        Box::pin(OUTGOING_MAILBOX.scope(outgoing_mailbox, async move {
+        Box::pin(MAILBOX.scope(mailbox, async move {
             let response: Result<Self::Response, Self::Error> = future.await;
             response.map(|mut response| {
-                OUTGOING_MAILBOX
+                MAILBOX
                     .with(|m| {
                         storage_backend.store(
                             &m,
@@ -107,50 +106,32 @@ pub struct Flash {
 }
 
 impl Flash {
-    pub fn message(key: String, content: String) -> Self {
-        Self {
-            key,
-            content,
-            flash_type: FlashType::Message,
-        }
+    pub fn message(key: String, content: String) -> Result<(), AppError> {
+        MAILBOX
+            .try_with(|mailbox| {
+                mailbox.messages.borrow_mut().insert(key, content);
+            })
+            .map_err(|e| AppError::server_error(e))
     }
 
-    pub fn error(key: String, content: String) -> Self {
-        Self {
-            key,
-            content,
-            flash_type: FlashType::Error,
-        }
+    pub fn error(key: String, content: String) -> Result<(), AppError> {
+        MAILBOX
+            .try_with(|mailbox| {
+                mailbox.errors.borrow_mut().insert(key, content);
+            })
+            .map_err(|e| AppError::server_error(e))
     }
 
-    pub fn data(key: String, content: String) -> Self {
-        Self {
-            key,
-            content,
-            flash_type: FlashType::Data,
-        }
+    pub fn data(key: String, content: String) -> Result<(), AppError> {
+        MAILBOX
+            .try_with(|mailbox| {
+                mailbox.data.borrow_mut().insert(key, content);
+            })
+            .map_err(|e| AppError::server_error(e))
     }
 
     pub fn content(&self) -> &str {
         &self.content
-    }
-
-    pub fn send(self) -> Result<(), AppError> {
-        OUTGOING_MAILBOX
-            .try_with(|mailbox| match self.flash_type {
-                FlashType::Message => {
-                    mailbox.messages.borrow_mut().insert(self.key, self.content);
-                }
-                FlashType::Error => {
-                    mailbox.errors.borrow_mut().insert(self.key, self.content);
-                }
-                FlashType::Data => {
-                    mailbox.data.borrow_mut().insert(self.key, self.content);
-                }
-            })
-            .map_err(|e| AppError::server_error(e))?;
-
-        Ok(())
     }
 }
 
@@ -206,11 +187,11 @@ fn extract_flash_messages(req: &HttpRequest) -> Result<IncomingFlashMessages, ac
 }
 
 pub trait FlashMessageStore: Send + Sync {
-    fn load(&self, request: &HttpRequest) -> Result<OutgoingMailbox, AppError>;
+    fn load(&self, request: &HttpRequest) -> Result<Mailbox, AppError>;
 
     fn store(
         &self,
-        mailbox: &OutgoingMailbox,
+        mailbox: &Mailbox,
         request: HttpRequest,
         response: &mut ResponseHead,
     ) -> Result<(), AppError>;
@@ -236,7 +217,7 @@ impl Default for SessionMessageStore {
 }
 
 impl FlashMessageStore for SessionMessageStore {
-    fn load(&self, request: &HttpRequest) -> Result<OutgoingMailbox, AppError> {
+    fn load(&self, request: &HttpRequest) -> Result<Mailbox, AppError> {
         let session = request.get_session();
         let mailbox = session
             .get(&self.key)
@@ -247,7 +228,7 @@ impl FlashMessageStore for SessionMessageStore {
 
     fn store(
         &self,
-        mailbox: &OutgoingMailbox,
+        mailbox: &Mailbox,
         request: HttpRequest,
         _response: &mut ResponseHead,
     ) -> Result<(), AppError> {

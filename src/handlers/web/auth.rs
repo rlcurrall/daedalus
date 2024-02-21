@@ -57,8 +57,8 @@ pub async fn login(
                 return Err(e);
             }
             _ => {
-                Flash::error("email".into(), "Invalid email or password".into()).send()?;
-                Flash::data("email".into(), form.email.to_owned()).send()?;
+                Flash::error("email".into(), "Invalid email or password".into())?;
+                Flash::data("email".into(), form.email.to_owned())?;
                 return Ok(HttpResponse::Found()
                     .append_header(("location", "/login"))
                     .finish());
