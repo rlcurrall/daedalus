@@ -32,7 +32,9 @@ impl Mailbox {
     }
 
     pub(self) fn is_empty(&self) -> bool {
-        self.messages.borrow().is_empty() && self.errors.borrow().is_empty()
+        self.messages.borrow().is_empty()
+            && self.errors.borrow().is_empty()
+            && self.data.borrow().is_empty()
     }
 }
 
@@ -60,8 +62,8 @@ where
     actix_web::dev::forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        req.extensions_mut().insert(self.storage_backend.clone());
         let mailbox = Mailbox::new();
+        req.extensions_mut().insert(self.storage_backend.clone());
         // Working with task-locals in actix-web middlewares is a bit annoying.
         // We need to make the task local value available to the rest of the middleware chain, which
         // generates the `future` which will in turn return us a response.
@@ -84,7 +86,10 @@ where
                             response.response_mut().head_mut(),
                         )
                     })
-                    .unwrap();
+                    .map_err(|e| {
+                        tracing::error!("Failed to store flash messages: {}", e);
+                    })
+                    .ok();
                 response
             })
         }))
