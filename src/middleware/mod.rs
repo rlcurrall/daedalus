@@ -1,2 +1,2 @@
+pub mod flash;
 pub mod session;
-pub mod flash_messages;

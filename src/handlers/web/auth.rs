@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::{
     database::PoolManager,
-    middleware::flash_messages::{Flash, FlashInbox},
+    middleware::flash::{Flash, FlashInbox},
     models::users::User,
     result::{AppError, HtmlResult},
     services::users::{UserCredentials, UserService},
