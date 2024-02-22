@@ -56,18 +56,6 @@ impl Tmpl {
             })
     }
 
-    pub fn one_off(&self, template: &str, context: &tera::Context) -> Result<String> {
-        self.templates
-            .lock()
-            .map_err(|e| AppError::ServerError {
-                cause: format!("Failed to render view: {}", e),
-            })?
-            .render_str(template, context)
-            .map_err(|e| AppError::ServerError {
-                cause: format!("Failed to render view: {}", e),
-            })
-    }
-
     pub fn reload(&self) -> Result<()> {
         let mut tera = self.templates.lock().map_err(|e| AppError::ServerError {
             cause: format!("Failed to reload templates: {}", e),
