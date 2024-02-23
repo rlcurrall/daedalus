@@ -13,11 +13,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let app_settings = match parse_args() {
         Ok(settings) => settings,
         Err(e) => {
-            eprintln!(
-                "{}\n\n\t{}\n",
-                style("Failed to parse configuration:").bold().red(),
-                e
-            );
+            print_error(e);
             std::process::exit(1);
         }
     };
@@ -237,4 +233,12 @@ fn cli() -> Command {
                 .help("Session lifetime")
                 .value_parser(value_parser!(u64)),
         )
+}
+
+fn print_error(e: AppError) {
+    eprintln!(
+        "{}\n\n\t{}\n",
+        style("Failed to parse configuration:").bold().red(),
+        e
+    );
 }
