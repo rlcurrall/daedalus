@@ -67,12 +67,13 @@ pub fn web_routes(
 ) -> impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static {
     move |cfg: &mut ServiceConfig| {
         cfg.service(
-            scope("/")
+            scope("")
                 .wrap(SessionMiddlewareBuilder::build(&settings.session))
                 .wrap(IdentityMiddleware::default())
                 .wrap(FlashMiddleware::new(SessionStore::default()))
                 .service(resource("/").name("landing_page").get(landing::index))
                 .service(resource("/home").name("home").get(home::index))
+                .service(resource("/logout").name("logout").get(auth::logout))
                 .service(
                     resource("/login")
                         .name("login")

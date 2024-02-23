@@ -15,7 +15,7 @@ pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Erro
 
     pool_manager.migrate()?;
 
-    tracing::info!("Starting server on port: {}", port);
+    tracing::info!("Starting server at: http://localhost:{}", port);
 
     HttpServer::new(move || {
         App::new()
