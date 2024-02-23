@@ -26,7 +26,7 @@ pub async fn index(
     context.insert("title", "Home");
     context.insert("user", &user);
 
-    let body = tmpl.render("home/page.njk", &context)?;
+    let body = tmpl.render("pages/home.njk", &context)?;
 
     Ok(HttpResponse::Ok().body(body))
 }
