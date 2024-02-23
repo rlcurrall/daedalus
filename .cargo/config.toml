@@ -1,2 +1,3 @@
 [alias]
-tsync="run --bin tsync"
+tsync = "run --bin tsync"
+dev = ["watch", "--ignore", "resource/*", "-x", "run"]
