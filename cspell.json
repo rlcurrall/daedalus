@@ -17,6 +17,7 @@
     "heroicons",
     "HTMX",
     "Insertable",
+    "jsonwebtoken",
     "lexopt",
     "Pico",
     "rankdir",

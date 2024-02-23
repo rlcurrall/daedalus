@@ -1,3 +1,5 @@
+use std::time::SystemTimeError;
+
 use actix_identity::error::LoginError;
 use actix_web::{
     error::{self, BlockingError},
@@ -185,8 +187,14 @@ impl From<config::ConfigError> for AppError {
     }
 }
 
-impl From<lexopt::Error> for AppError {
-    fn from(err: lexopt::Error) -> AppError {
+impl From<jsonwebtoken::errors::Error> for AppError {
+    fn from(err: jsonwebtoken::errors::Error) -> AppError {
+        AppError::server_error(err.to_string())
+    }
+}
+
+impl From<SystemTimeError> for AppError {
+    fn from(err: SystemTimeError) -> AppError {
         AppError::server_error(err.to_string())
     }
 }
@@ -257,6 +265,18 @@ impl From<BlockingError> for JsonErrorResponse {
 
 impl From<LoginError> for JsonErrorResponse {
     fn from(err: LoginError) -> Self {
+        JsonErrorResponse(AppError::from(err))
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for JsonErrorResponse {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        JsonErrorResponse(AppError::from(err))
+    }
+}
+
+impl From<SystemTimeError> for JsonErrorResponse {
+    fn from(err: SystemTimeError) -> Self {
         JsonErrorResponse(AppError::from(err))
     }
 }
@@ -344,6 +364,18 @@ impl From<BlockingError> for HtmlErrorResponse {
 
 impl From<LoginError> for HtmlErrorResponse {
     fn from(err: LoginError) -> Self {
+        HtmlErrorResponse(AppError::from(err))
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for HtmlErrorResponse {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        HtmlErrorResponse(AppError::from(err))
+    }
+}
+
+impl From<SystemTimeError> for HtmlErrorResponse {
+    fn from(err: SystemTimeError) -> Self {
         HtmlErrorResponse(AppError::from(err))
     }
 }

@@ -1,19 +1,20 @@
-use actix_identity::Identity;
-use actix_web::{
-    web::{block, Data, Json, Path, Query},
-    HttpMessage, HttpRequest,
-};
+use std::fs::read_to_string;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use actix_web::web::{block, Data, Json, Path, Query};
+use actix_web::HttpRequest;
+use jsonwebtoken::{encode, EncodingKey, Header};
+use serde_json::json;
+
+use crate::config::AppSettings;
+use crate::middleware::bearer::UserClaims;
+use crate::models::users::{CreateUser, User, UserQuery};
 use crate::result::{AppError, JsonResult};
 use crate::services::users::{UserCredentials, UserService};
 use crate::{database::PoolManager, models::users::UpdateUser};
-use crate::{
-    models::users::{CreateUser, User, UserQuery},
-    UserId,
-};
 
 pub async fn list(
-    _: UserId,
+    _: UserClaims,
     Query(filter): Query<UserQuery>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Vec<User>>> {
@@ -40,6 +41,7 @@ pub async fn create(
 }
 
 pub async fn update(
+    _: UserClaims,
     Json(request): Json<UpdateUser>,
     id: Path<i64>,
     pool: Data<PoolManager>,
@@ -57,29 +59,37 @@ pub async fn update(
 pub async fn authenticate(
     Json(request): Json<UserCredentials>,
     pool: Data<PoolManager>,
-    req: HttpRequest,
-) -> JsonResult<Json<User>> {
+    setting: Data<AppSettings>,
+    _req: HttpRequest,
+) -> JsonResult<Json<serde_json::Value>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn).authenticate(request)
     })
     .await??;
 
-    Identity::login(&req.extensions(), user.id.to_string())?;
+    let priv_key = read_to_string(setting.jwt.priv_key.clone())?;
+    let key = EncodingKey::from_rsa_pem(priv_key.as_bytes())?;
+    let header = Header::new(jsonwebtoken::Algorithm::RS256);
+    let exp = SystemTime::now()
+        .checked_add(setting.jwt.lifetime.clone())
+        .ok_or(AppError::server_error("Failed to set token expiration"))?
+        .duration_since(UNIX_EPOCH)?
+        .as_secs() as usize;
+    let claims = UserClaims::new(user.id, exp, vec![]);
+    let token = encode(&header, &claims, &key)?;
 
-    Ok(Json(user))
+    Ok(Json(json!({
+        "token": token,
+        "user": user,
+    })))
 }
 
-pub async fn logout(id: Identity) -> JsonResult<Json<()>> {
-    id.logout();
-    Ok(Json(()))
-}
-
-pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
+pub async fn me(claims: UserClaims, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let user = block(move || {
         let conn = pool.get()?;
         UserService::new(conn)
-            .find(id)?
+            .find(claims.sub)?
             .ok_or(AppError::Unauthorized)
     })
     .await??;
@@ -87,7 +97,7 @@ pub async fn me(UserId(id): UserId, pool: Data<PoolManager>) -> JsonResult<Json<
     Ok(Json(user))
 }
 
-pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
+pub async fn find(_: UserClaims, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let id = id.into_inner();
     let user = block(move || {
         let conn = pool.get()?;

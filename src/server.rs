@@ -1,7 +1,7 @@
 use actix_identity::IdentityMiddleware;
 use actix_web::{
     middleware::{Compress, NormalizePath},
-    web::{get, post, resource, scope, Data, Path},
+    web::{get, post, resource, scope, Data, Path, ServiceConfig},
     App, HttpResponse, HttpServer,
 };
 use rust_embed::RustEmbed;
@@ -12,7 +12,8 @@ use crate::{
     database::PoolManager,
     handlers::{api, web},
     middleware::{
-        flash_messages::{FlashMiddleware, SessionStore},
+        bearer::JwtAuth,
+        flash::{FlashMiddleware, SessionStore},
         session::SessionMiddlewareBuilder,
     },
     tmpl::Tmpl,
@@ -32,14 +33,11 @@ pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Erro
             .app_data(Data::new(settings.clone()))
             .app_data(Data::new(pool_manager.clone()))
             .app_data(Data::new(templates.clone()))
-            .wrap(IdentityMiddleware::default())
-            .wrap(FlashMiddleware::new(SessionStore::default()))
-            .wrap(SessionMiddlewareBuilder::build(&settings.session))
             .wrap(NormalizePath::trim())
             .wrap(Compress::default())
             .wrap(TracingLogger::default())
-            .configure(api_routes)
-            .configure(web_routes)
+            .configure(api_routes(settings.clone()))
+            .configure(web_routes(settings.clone()))
     })
     .bind(("0.0.0.0", port))?
     .workers(workers)
@@ -49,69 +47,77 @@ pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
-fn api_routes(cfg: &mut actix_web::web::ServiceConfig) {
+fn api_routes(settings: AppSettings) -> impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static {
     use api::{tenants, users, workflows};
 
-    cfg.service(
-        scope("/api")
-            .service(
-                scope("/users")
-                    .route("/me", get().to(users::me))
-                    .route("/logout", post().to(users::logout))
-                    .route("/authenticate", post().to(users::authenticate)),
-            )
-            .service(
-                resource("/users")
-                    .name("user_collection")
-                    .get(users::list)
-                    .post(users::create),
-            )
-            .service(
-                resource("/users/{id}")
-                    .name("user_detail")
-                    .get(users::find)
-                    .post(users::update),
-            )
-            .service(
-                resource("/tenants")
-                    .name("tenant_collection")
-                    .get(tenants::list)
-                    .post(tenants::create),
-            )
-            .service(
-                resource("/tenants/{id}")
-                    .name("tenant_detail")
-                    .get(tenants::find)
-                    .post(tenants::update),
-            )
-            .service(
-                resource("/workflows")
-                    .name("workflow_collection")
-                    .get(workflows::list)
-                    .post(workflows::create),
-            )
-            .service(
-                resource("/workflows/{id}")
-                    .name("workflow_detail")
-                    .get(workflows::find)
-                    .post(workflows::update),
-            ),
-    );
+    move |cfg: &mut ServiceConfig| {
+        cfg.service(
+            scope("/api")
+                .wrap(JwtAuth::new(settings.jwt.pub_key.clone()))
+                .service(
+                    scope("/users")
+                        .route("/me", get().to(users::me))
+                        .route("/authenticate", post().to(users::authenticate)),
+                )
+                .service(
+                    resource("/users")
+                        .name("user_collection")
+                        .get(users::list)
+                        .post(users::create),
+                )
+                .service(
+                    resource("/users/{id}")
+                        .name("user_detail")
+                        .get(users::find)
+                        .post(users::update),
+                )
+                .service(
+                    resource("/tenants")
+                        .name("tenant_collection")
+                        .get(tenants::list)
+                        .post(tenants::create),
+                )
+                .service(
+                    resource("/tenants/{id}")
+                        .name("tenant_detail")
+                        .get(tenants::find)
+                        .post(tenants::update),
+                )
+                .service(
+                    resource("/workflows")
+                        .name("workflow_collection")
+                        .get(workflows::list)
+                        .post(workflows::create),
+                )
+                .service(
+                    resource("/workflows/{id}")
+                        .name("workflow_detail")
+                        .get(workflows::find)
+                        .post(workflows::update),
+                ),
+        );
+    }
 }
 
-fn web_routes(cfg: &mut actix_web::web::ServiceConfig) {
+fn web_routes(settings: AppSettings) -> impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static {
     use web::{auth, home, landing};
 
-    cfg.service(resource("/").name("landing_page").get(landing::index))
-        .service(resource("/home").name("home").get(home::index))
-        .service(
-            resource("/login")
-                .name("login")
-                .get(auth::show_login)
-                .post(auth::login),
-        )
-        .service(resource("/logout").get(auth::logout))
-        .route("/{version}/{path:.*}", get().to(static_files));
+    move |cfg: &mut ServiceConfig| {
+        cfg.service(
+            scope("/")
+                .wrap(SessionMiddlewareBuilder::build(&settings.session))
+                .wrap(IdentityMiddleware::default())
+                .wrap(FlashMiddleware::new(SessionStore::default()))
+                .service(resource("/").name("landing_page").get(landing::index))
+                .service(resource("/home").name("home").get(home::index))
+                .service(
+                    resource("/login")
+                        .name("login")
+                        .get(auth::show_login)
+                        .post(auth::login),
+                ),
+        );
+    }
 }
 
 #[derive(RustEmbed)]

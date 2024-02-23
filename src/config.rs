@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, str::FromStr, time::Duration};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
 
 use config::{Config as RustConfig, Environment, File};
 use serde::{Deserialize, Serialize, Serializer};
@@ -8,6 +8,24 @@ use crate::{
     models::defaults::{default_bool, default_duration, default_u16, default_u32, default_usize},
     result::{AppError, Result},
 };
+
+#[serde_as]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct JwtSettings {
+    /// The path to the public key used to verify JWT tokens.
+    /// This field is required.
+    pub pub_key: PathBuf,
+
+    /// The path to the private key used to sign JWT tokens.
+    /// This field is required.
+    pub priv_key: PathBuf,
+
+    /// Lifetime of the JWT token in seconds.
+    /// The default is 3600 seconds.
+    #[serde_as(as = "DurationSeconds<u64>")]
+    #[serde(default = "default_duration::<3600>")]
+    pub lifetime: Duration,
+}
 
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -117,6 +135,9 @@ pub struct AppSettings {
     #[serde(default = "default_bool::<false>")]
     pub debug: bool,
 
+    /// The settings for JWT.
+    pub jwt: JwtSettings,
+
     /// The settings for the database.
     pub database: DatabaseSettings,
 
@@ -197,6 +218,28 @@ impl Config {
             "database.thread_pool_size".to_string(),
             thread_size.to_string(),
         );
+        self
+    }
+
+    pub fn set_jwt_pub_key(mut self, pub_key: &PathBuf) -> Self {
+        self.overrides.insert(
+            "jwt.pub_key".to_string(),
+            pub_key.to_string_lossy().to_string(),
+        );
+        self
+    }
+
+    pub fn set_jwt_priv_key(mut self, priv_key: &PathBuf) -> Self {
+        self.overrides.insert(
+            "jwt.priv_key".to_string(),
+            priv_key.to_string_lossy().to_string(),
+        );
+        self
+    }
+
+    pub fn set_jwt_lifetime(mut self, lifetime: u64) -> Self {
+        self.overrides
+            .insert("jwt.lifetime".to_string(), lifetime.to_string());
         self
     }
 

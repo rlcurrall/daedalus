@@ -1,6 +1,11 @@
 name = "daedalus"
 debug = true
 
+[jwt]
+pub_key = "./conf/public.pem"
+priv_key = "./conf/private.pem"
+lifetime = 7200
+
 [database]
 url = "postgres://postgres:postgres@localhost:5432/daedalus"
 max_connections = 10
