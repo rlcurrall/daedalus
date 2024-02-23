@@ -1,19 +1,15 @@
 use actix_identity::Identity;
-use actix_web::{
-    web::{block, Data, Form},
-    HttpMessage, HttpRequest, HttpResponse,
-};
+use actix_web::web::{block, Data, Form};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse};
 use serde::Deserialize;
 
-use crate::{
-    database::PoolManager,
-    middleware::flash::{Flash, FlashInbox},
-    models::users::User,
-    result::{AppError, HtmlResult},
-    services::users::{UserCredentials, UserService},
-    tmpl::{Context, Tmpl},
-    UserId,
-};
+use crate::database::PoolManager;
+use crate::middleware::flash::{Flash, FlashInbox};
+use crate::models::users::User;
+use crate::result::{AppError, HtmlResult};
+use crate::services::users::{UserCredentials, UserService};
+use crate::tmpl::{Context, Tmpl};
+use crate::UserId;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct LoginFormData {

@@ -1,16 +1,12 @@
-use actix_web::{
-    web::{block, Data},
-    HttpResponse,
-};
+use actix_web::web::{block, Data};
+use actix_web::HttpResponse;
 
-use crate::{
-    database::PoolManager,
-    models::users::User,
-    result::{AppError, HtmlResult},
-    services::users::UserService,
-    tmpl::{Context, Tmpl},
-    UserId,
-};
+use crate::database::PoolManager;
+use crate::models::users::User;
+use crate::result::{AppError, HtmlResult};
+use crate::services::users::UserService;
+use crate::tmpl::{Context, Tmpl};
+use crate::UserId;
 
 pub async fn index(
     id: Option<UserId>,

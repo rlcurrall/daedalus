@@ -1,12 +1,10 @@
 use actix_web::web::{block, Data, Json, Path, Query};
 
+use crate::models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
 use crate::result::AppError;
+use crate::result::JsonResult;
 use crate::services::tenants::TenantService;
 use crate::{database::PoolManager, UserId};
-use crate::{
-    models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant},
-    result::JsonResult,
-};
 
 pub async fn list(
     _: UserId,

@@ -1,8 +1,6 @@
-use crate::{
-    database::PooledConnection,
-    models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant},
-    result::Result,
-};
+use crate::database::PooledConnection;
+use crate::models::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
+use crate::result::Result;
 
 pub struct TenantService {
     conn: PooledConnection,

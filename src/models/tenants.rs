@@ -1,16 +1,12 @@
 use chrono::{DateTime, Utc};
-use diesel::{
-    helper_types::{AsSelect, Filter, Select},
-    prelude::*,
-};
+use diesel::helper_types::{AsSelect, Filter, Select};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 
 use super::defaults::{default_bool, default_i64};
-use crate::{
-    database::{schema::tenants, DbConnection, DB},
-    result::Result,
-};
+use crate::database::{schema::tenants, DbConnection, DB};
+use crate::result::Result;
 
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
 #[tsync]

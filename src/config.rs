@@ -4,10 +4,10 @@ use config::{Config as RustConfig, Environment, File};
 use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{serde_as, DurationSeconds};
 
-use crate::{
-    models::defaults::{default_bool, default_duration, default_u16, default_u32, default_usize},
-    result::{AppError, Result},
+use crate::models::defaults::{
+    default_bool, default_duration, default_u16, default_u32, default_usize,
 };
+use crate::result::{AppError, Result};
 
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -1,11 +1,9 @@
 use std::time::SystemTimeError;
 
 use actix_identity::error::LoginError;
-use actix_web::{
-    error::{self, BlockingError},
-    http::StatusCode,
-    HttpResponse,
-};
+use actix_web::error::{self, BlockingError};
+use actix_web::http::StatusCode;
+use actix_web::HttpResponse;
 use derive_more::{Display, Error};
 use serde_json::json;
 

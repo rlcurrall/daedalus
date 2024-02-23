@@ -1,15 +1,11 @@
-use diesel::{
-    helper_types::{AsSelect, Filter, Select},
-    prelude::*,
-};
+use diesel::helper_types::{AsSelect, Filter, Select};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 
 use super::defaults::{default_bool, default_i64};
-use crate::{
-    database::{schema::users, DbConnection, DB},
-    result::AppError,
-};
+use crate::database::{schema::users, DbConnection, DB};
+use crate::result::AppError;
 
 #[derive(Clone, Debug, Deserialize, Insertable, Serialize)]
 #[tsync]

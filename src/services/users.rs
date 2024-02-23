@@ -1,14 +1,10 @@
-use argon2::{
-    password_hash::{rand_core::OsRng, SaltString},
-    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
-};
+use argon2::password_hash::{rand_core::OsRng, SaltString};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use serde::{Deserialize, Serialize};
 
+use crate::database::PooledConnection;
 use crate::models::users::{CreateUser, UpdateUser, User, UserQuery};
-use crate::{
-    database::PooledConnection,
-    result::{AppError, Result},
-};
+use crate::result::{AppError, Result};
 
 #[derive(Serialize, Deserialize)]
 pub struct UserCredentials {

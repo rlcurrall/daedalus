@@ -1,25 +1,19 @@
 use std::io::Write;
 
-use diesel::{
-    deserialize::{FromSql, FromSqlRow},
-    expression::AsExpression,
-    pg::PgValue,
-    prelude::*,
-    serialize::{self, IsNull, Output, ToSql},
-    sql_types::Jsonb,
-};
+use diesel::deserialize::{FromSql, FromSqlRow};
+use diesel::expression::AsExpression;
+use diesel::pg::PgValue;
+use diesel::prelude::*;
+use diesel::serialize::{self, IsNull, Output, ToSql};
+use diesel::sql_types::Jsonb;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 use uuid::Uuid;
 
-use super::{
-    common::Paginated,
-    defaults::{default_bool, default_i32, default_i64},
-};
-use crate::{
-    database::{schema::workflows, DbConnection, DB},
-    result::AppError,
-};
+use super::common::Paginated;
+use super::defaults::{default_bool, default_i32, default_i64};
+use crate::database::{schema::workflows, DbConnection, DB};
+use crate::result::AppError;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[tsync]

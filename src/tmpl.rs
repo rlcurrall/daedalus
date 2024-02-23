@@ -1,7 +1,5 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use rust_embed::RustEmbed;
 use serde_json::Value;
@@ -11,7 +9,7 @@ use tera::Tera;
 use crate::result::{AppError, Result};
 
 #[derive(RustEmbed)]
-#[folder = "templates"]
+#[folder = "resource/templates"]
 struct Assets;
 
 #[derive(Clone)]

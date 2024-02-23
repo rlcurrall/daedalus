@@ -1,11 +1,7 @@
-use crate::{
-    database::PooledConnection,
-    models::{
-        common::Paginated,
-        workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery},
-    },
-    result::Result,
-};
+use crate::database::PooledConnection;
+use crate::models::common::Paginated;
+use crate::models::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
+use crate::result::Result;
 
 pub struct WorkflowService {
     conn: PooledConnection,

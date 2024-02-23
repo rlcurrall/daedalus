@@ -4,11 +4,9 @@ use clap::{value_parser, Arg, ArgAction, Command};
 use console::style;
 use tracing_subscriber::{self, filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
-use daedalus::{
-    config::{AppSettings, Config, LogFormat, LogLevel},
-    result::{AppError, Result},
-    server,
-};
+use daedalus::config::{AppSettings, Config, LogFormat, LogLevel};
+use daedalus::result::{AppError, Result};
+use daedalus::server;
 
 #[actix_web::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {

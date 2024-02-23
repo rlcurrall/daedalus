@@ -1,15 +1,11 @@
 use actix_web::web::{block, Data, Json, Path, Query};
 
-use crate::{
-    database::PoolManager,
-    models::{
-        common::Paginated,
-        workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery},
-    },
-    result::{AppError, JsonResult},
-    services::workflows::WorkflowService,
-    UserId,
-};
+use crate::database::PoolManager;
+use crate::models::common::Paginated;
+use crate::models::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
+use crate::result::{AppError, JsonResult};
+use crate::services::workflows::WorkflowService;
+use crate::UserId;
 
 pub async fn list(
     _: UserId,

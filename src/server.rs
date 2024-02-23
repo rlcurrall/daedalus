@@ -1,23 +1,17 @@
 use actix_identity::IdentityMiddleware;
-use actix_web::{
-    middleware::{Compress, NormalizePath},
-    web::{get, post, resource, scope, Data, Path, ServiceConfig},
-    App, HttpResponse, HttpServer,
-};
+use actix_web::middleware::{Compress, NormalizePath};
+use actix_web::web::{get, post, resource, scope, Data, Path, ServiceConfig};
+use actix_web::{App, HttpResponse, HttpServer};
 use rust_embed::RustEmbed;
 use tracing_actix_web::TracingLogger;
 
-use crate::{
-    config::{AppSettings, ServerSettings},
-    database::PoolManager,
-    handlers::{api, web},
-    middleware::{
-        bearer::JwtAuth,
-        flash::{FlashMiddleware, SessionStore},
-        session::SessionMiddlewareBuilder,
-    },
-    tmpl::Tmpl,
-};
+use crate::config::{AppSettings, ServerSettings};
+use crate::database::PoolManager;
+use crate::handlers::{api, web};
+use crate::middleware::bearer::JwtAuth;
+use crate::middleware::flash::{FlashMiddleware, SessionStore};
+use crate::middleware::session::SessionMiddlewareBuilder;
+use crate::tmpl::Tmpl;
 
 pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Error>> {
     let mut pool_manager = PoolManager::new(&settings.database);
@@ -121,7 +115,7 @@ fn web_routes(settings: AppSettings) -> impl FnOnce(&mut ServiceConfig) + Send +
 }
 
 #[derive(RustEmbed)]
-#[folder = "static"]
+#[folder = "resource/assets"]
 struct StaticAssets;
 
 pub async fn static_files(path: Path<(String, String)>) -> HttpResponse {
