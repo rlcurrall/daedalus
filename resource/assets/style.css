@@ -58,7 +58,8 @@ body > main {
   height: 50px;
 }
 
-:root:not([data-theme=dark]),[data-theme=light] article.error {
+:root:not([data-theme="dark"]) article.error,
+[data-theme="light"] article.error {
   --pico-card-background-color: var(--pico-color-red-100);
 }
 
