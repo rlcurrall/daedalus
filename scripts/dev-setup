@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+##
+## Description:
+##   Setup the locoal development environment. This will create the necessary PEM
+##   files to create and validate JWT tokens, as well as generate a JWT token to
+##   be used for testing and development.
+##
+## Usage:
+##   dev-setup
+##
+
+__dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Generate RSA public/private keys
+${__dir}/jwt -o conf key
+
+echo -e "\n"
+
+# Output JWT token to `jwt.txt` and echo to the console
+${__dir}/jwt -e 172800 new user@example.com ./conf/private.pem > jwt.txt
+cat jwt.txt
