@@ -91,7 +91,7 @@ pub fn web_routes(
 }
 
 #[derive(RustEmbed)]
-#[folder = "resource/assets"]
+#[folder = "resources/assets"]
 struct StaticAssets;
 
 pub async fn static_files(path: Path<(String, String)>) -> HttpResponse {

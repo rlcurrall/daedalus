@@ -9,7 +9,7 @@ use tera::Tera;
 use crate::result::{AppError, Result};
 
 #[derive(RustEmbed)]
-#[folder = "resource/templates"]
+#[folder = "resources/templates"]
 struct Assets;
 
 #[derive(Clone)]
