@@ -73,7 +73,12 @@ pub fn web_routes(
                 .wrap(FlashMiddleware::new(SessionStore::default()))
                 .service(resource("/").name("landing_page").get(landing::index))
                 .service(resource("/home").name("home").get(home::index))
-                .service(resource("/logout").name("logout").get(auth::logout))
+                .service(
+                    resource("/logout")
+                        .name("logout")
+                        .get(auth::logout)
+                        .post(auth::logout),
+                )
                 .service(
                     resource("/login")
                         .name("login")
@@ -100,6 +105,9 @@ pub async fn static_files(path: Path<(String, String)>) -> HttpResponse {
 
     match String::from_utf8(file.data.into_owned()) {
         Ok(content) => HttpResponse::Ok().content_type(mimetype).body(content),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(e) => {
+            tracing::info!("Error reading file: {:?}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
