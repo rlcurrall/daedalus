@@ -13,7 +13,7 @@
 -- Create workflow table
 CREATE TABLE workflows (
     id BIGSERIAL PRIMARY KEY,
-    tenant_id INT NOT NULL REFERENCES tenants(id),
+    tenant_id INT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     definition JSONB NOT NULL,
