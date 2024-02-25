@@ -1,0 +1,102 @@
+{% extends "layouts/default.njk" %}
+
+{% block content %}
+<style>
+  section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 5rem;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 20rem;
+  }
+</style>
+
+<section class="container">
+  <header>
+    <hgroup>
+      <h1>Register</h1>
+      <p>A minimalist layout for registration pages</p>
+    </hgroup>
+  </header>
+
+  {% if errors.general %}
+  <article class="error">
+    {{ errors.general }}
+  </article>
+  {% endif %}
+
+  <form method="post" action="/register">
+    <fieldset role="group">
+      <input
+        type="text"
+        name="first_name"
+        placeholder="First Name"
+        aria-label="First Name"
+        autocomplete="given-name"
+        required
+        {% if data.first_name %}
+        value="{{ data.first_name }}"
+        {% endif %}
+        {% if errors.first_name %}
+        aria-invalid="true"
+        {% endif %}
+      />
+      <input
+        type="text"
+        name="last_name"
+        placeholder="Last Name"
+        aria-label="Last Name"
+        autocomplete="family-name"
+        required
+        {% if data.last_name %}
+        value="{{ data.last_name }}"
+        {% endif %}
+        {% if errors.last_name %}
+        aria-invalid="true"
+        {% endif %}
+      />
+    </fieldset>
+    <input
+      type="text"
+      name="email"
+      placeholder="Email"
+      aria-label="Email"
+      autocomplete="email"
+      required
+      {% if data.email %}
+      value="{{ data.email }}"
+      {% endif %}
+      {% if errors.email %}
+      aria-invalid="true"
+      {% endif %}
+    />
+    <input
+      type="password"
+      name="password"
+      placeholder="Password"
+      aria-label="Password"
+      autocomplete="new-password"
+      required
+      {% if errors.password %}
+      aria-invalid="true"
+      {% endif %}
+    />
+    <input
+      type="password"
+      name="password-confirm"
+      placeholder="Confirm Password"
+      aria-label="Confirm Password"
+      autocomplete="new-password"
+      required
+    />
+    <button type="submit">Register</button>
+  </form>
+</section>
+{% endblock %}

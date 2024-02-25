@@ -2,7 +2,7 @@
 
 {% block content %}
 <style>
-  main {
+  section {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -19,7 +19,7 @@
 </style>
 
 {# Main #}
-<main class="container">
+<section class="container">
   <header>
     <hgroup>
       <h1>Sign in</h1>
@@ -27,9 +27,9 @@
     </hgroup>
   </header>
 
-  {% if errors.email %}
+  {% if errors.general %}
   <article class="error">
-    {{ errors.email }}
+    {{ errors.general }}
   </article>
   {% endif %}
 
@@ -41,7 +41,7 @@
       aria-label="Email"
       autocomplete="email"
       required
-      {% if errors.email %}
+      {% if data.email %}
       value="{{ data.email }}"
       {% endif %}
       {% if errors.email %}
@@ -55,11 +55,11 @@
       aria-label="Password"
       autocomplete="current-password"
       required
-      {% if errors.email %}
+      {% if errors.password %}
       aria-invalid="true"
       {% endif %}
     />
     <button type="submit">Login</button>
   </form>
-</main>
+</section>
 {% endblock %}

@@ -85,6 +85,12 @@ pub fn web_routes(
                         .get(auth::show_login)
                         .post(auth::login),
                 )
+                .service(
+                    resource("/register")
+                        .name("register")
+                        .get(auth::show_register)
+                        .post(auth::register),
+                )
                 .route("/{version}/{path:.*}", get().to(static_files)),
         );
     }
