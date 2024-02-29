@@ -2,15 +2,12 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 
-use rust_embed::RustEmbed;
+use serde::Deserialize;
 pub use tera::Context;
 use tera::Tera;
 
+use crate::embedded::{PublicFiles, TemplateFiles};
 use crate::result::{AppError, Result};
-
-#[derive(RustEmbed)]
-#[folder = "resources/templates"]
-struct TemplateFiles;
 
 #[derive(Clone)]
 pub struct Tmpl {
@@ -18,20 +15,27 @@ pub struct Tmpl {
     templates: Arc<Mutex<Tera>>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct Manifest {
+    pub(self) file: String,
+}
+
 impl Tmpl {
     pub fn init(version: String, dev: bool) -> Result<Self> {
-        let mut templates = Tera::default();
-
-        templates.register_function("version", InjectVersion::new(version.clone()));
-        templates.register_function("asset_path", InjectAssetPath::new(version.clone()));
-        templates.register_function("vite", InjectVite);
-        templates.register_function("js", InjectJs);
-        templates.register_function("css", InjectCss);
-
-        let instance = Self {
-            dev,
-            templates: Arc::new(Mutex::new(templates)),
+        let manifest = if dev {
+            HashMap::new()
+        } else {
+            Self::load_manifest()?
         };
+
+        let mut templates = Tera::default();
+        templates.register_function("version", InjectVersion::new(version.clone()));
+        templates.register_function("vite", InjectVite::new(dev));
+        templates.register_function("js", InjectJs::new(dev, manifest.clone()));
+        templates.register_function("css", InjectCss::new(dev, manifest.clone()));
+        let templates = Arc::new(Mutex::new(templates));
+
+        let instance = Self { dev, templates };
 
         instance.reload()?;
 
@@ -80,39 +84,128 @@ impl Tmpl {
 
         Ok(())
     }
+
+    fn load_manifest() -> Result<HashMap<String, Manifest>> {
+        PublicFiles::get("build/manifest.json")
+            .ok_or(AppError::server_error("Failed to load manifest.json"))
+            .and_then(|f| {
+                String::from_utf8(f.data.into_owned()).map_err(|e| AppError::server_error(e))
+            })
+            .and_then(|c| {
+                serde_json::from_str::<HashMap<String, Manifest>>(&c)
+                    .map_err(|e| AppError::server_error(e))
+            })
+    }
 }
 
-struct InjectVite;
+struct InjectVite {
+    dev: bool,
+}
+
+impl InjectVite {
+    pub fn new(dev: bool) -> Self {
+        Self { dev }
+    }
+}
 
 impl tera::Function for InjectVite {
     fn call(&self, _: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-        Ok(tera::Value::String(format!(
-            r#"<script type="module" src="http://localhost:5173/@vite/client"></script>"#
-        )))
+        if self.dev {
+            Ok(tera::Value::String(
+                r#"<script type="module" src="http://localhost:5173/@vite/client"></script>"#
+                    .to_string(),
+            ))
+        } else {
+            Ok(tera::Value::Null)
+        }
     }
 }
 
-struct InjectJs;
+struct InjectJs {
+    dev: bool,
+    manifest: HashMap<String, Manifest>,
+}
+
+impl InjectJs {
+    pub fn new(dev: bool, manifest: HashMap<String, Manifest>) -> Self {
+        Self { dev, manifest }
+    }
+}
 
 impl tera::Function for InjectJs {
     fn call(&self, args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-        let bundle_name = args.get("name").and_then(tera::Value::as_str).unwrap_or("");
-        let inject = format!(
-            r#"<script type="module" src="http://localhost:5173/resources/js/{bundle_name}"></script>"#
-        );
-        Ok(tera::Value::String(inject))
+        let name = args
+            .get("name")
+            .and_then(tera::Value::as_str)
+            .ok_or(tera::Error::msg(
+                "No name provided for js bundle. Example: {{ js('app.js') }}",
+            ))?;
+
+        if self.dev {
+            let inject = format!(
+                r#"<script type="module" src="http://localhost:5173/resources/js/{name}"></script>"#
+            );
+            return Ok(tera::Value::String(inject));
+        }
+
+        let manifest_id = format!("resources/js/{name}");
+        let manifest = self.manifest.get(&manifest_id);
+        match manifest {
+            None => Err(tera::Error::msg(format!(
+                "Failed to find js bundle: {name}"
+            ))),
+            Some(manifest) => {
+                let inject = format!(
+                    r#"<script type="module" src="/build/{}"></script>"#,
+                    manifest.file
+                );
+                Ok(tera::Value::String(inject))
+            }
+        }
     }
 }
 
-struct InjectCss;
+struct InjectCss {
+    dev: bool,
+    manifest: HashMap<String, Manifest>,
+}
+
+impl InjectCss {
+    pub fn new(dev: bool, manifest: HashMap<String, Manifest>) -> Self {
+        Self { dev, manifest }
+    }
+}
 
 impl tera::Function for InjectCss {
     fn call(&self, args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-        let bundle_name = args.get("name").and_then(tera::Value::as_str).unwrap_or("");
-        let inject = format!(
-            r#"<link rel="stylesheet" href="http://localhost:5173/resources/css/{bundle_name}" />"#
-        );
-        Ok(tera::Value::String(inject))
+        let bundle_name =
+            args.get("name")
+                .and_then(tera::Value::as_str)
+                .ok_or(tera::Error::msg(
+                    "No name provided for css bundle. Example: {{ css('app.css') }}",
+                ))?;
+
+        if self.dev {
+            let inject = format!(
+                r#"<link rel="stylesheet" href="http://localhost:5173/resources/css/{bundle_name}" />"#
+            );
+            return Ok(tera::Value::String(inject));
+        }
+
+        let manifest_id = format!("resources/css/{bundle_name}");
+        let manifest = self.manifest.get(&manifest_id);
+        match manifest {
+            None => Err(tera::Error::msg(format!(
+                "Failed to find css bundle: {bundle_name}"
+            ))),
+            Some(manifest) => {
+                let inject = format!(
+                    r#"<link rel="stylesheet" href="/build/{}" />"#,
+                    manifest.file
+                );
+                Ok(tera::Value::String(inject))
+            }
+        }
     }
 }
 
@@ -129,24 +222,5 @@ impl InjectVersion {
 impl tera::Function for InjectVersion {
     fn call(&self, _: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
         Ok(tera::Value::String(self.version.clone()))
-    }
-}
-
-struct InjectAssetPath {
-    version: String,
-}
-
-impl InjectAssetPath {
-    pub fn new(version: String) -> Self {
-        Self { version }
-    }
-}
-
-impl tera::Function for InjectAssetPath {
-    fn call(&self, args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-        let name = args.get("name").and_then(tera::Value::as_str).unwrap_or("");
-        let version = &self.version;
-        let path = format!("/{}/{}", version, name);
-        Ok(tera::Value::String(path))
     }
 }

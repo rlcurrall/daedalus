@@ -1,16 +1,15 @@
 use actix_identity::IdentityMiddleware;
 use actix_web::web::{get, post, resource, scope, Data, ServiceConfig};
 use actix_web::{HttpRequest, HttpResponse};
-use rust_embed::RustEmbed;
-use tera::Context;
 
 use crate::config::AppSettings;
+use crate::embedded::PublicFiles;
 use crate::handlers::api::{tenants, users, workflows};
 use crate::handlers::web::{auth, home, landing};
 use crate::middleware::bearer::JwtAuth;
 use crate::middleware::flash::{FlashMiddleware, SessionStore};
 use crate::middleware::session::SessionMiddlewareBuilder;
-use crate::tmpl::Tmpl;
+use crate::tmpl::{Context, Tmpl};
 
 pub fn api_routes(
     settings: AppSettings,
@@ -98,19 +97,9 @@ pub fn web_routes(
     }
 }
 
-#[derive(RustEmbed)]
-#[folder = "public"]
-struct PublicFiles;
-
-pub async fn render_views(req: HttpRequest, tmpl: Data<Tmpl>) -> HttpResponse {
+pub async fn render_views(req: HttpRequest) -> HttpResponse {
     let path = req.path();
     let path = path.strip_prefix('/').unwrap_or(path);
-
-    // Check if the path is a template that did not have an explicit route defined
-    let template_name = to_template_name(&path);
-    if let Ok(body) = tmpl.render(&template_name, &Context::new()) {
-        return HttpResponse::Ok().content_type("text/html").body(body);
-    }
 
     // Check if the path is a static asset
     if let Some(file) = PublicFiles::get(&path) {

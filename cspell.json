@@ -30,6 +30,7 @@
     "tailwindcss",
     "Tera",
     "tmpl",
-    "tsync"
+    "tsync",
+    "vite"
   ]
 }
