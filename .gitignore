@@ -1,8 +1,12 @@
+# Rust Build
 target
-node_modules
 
+# Local Development Secrets
 .env
-
-# JWT Secrets
 conf
 jwt.txt
+
+# Vite files
+node_modules
+public/hot
+public/build

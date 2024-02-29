@@ -92,6 +92,7 @@ pub fn web_routes(
                         .get(auth::show_register)
                         .post(auth::register),
                 )
+                .route("/vite", get().to(vite_test))
                 .default_service(get().to(render_views)),
         );
     }
@@ -116,11 +117,8 @@ pub async fn render_views(req: HttpRequest) -> HttpResponse {
     HttpResponse::NotFound().finish()
 }
 
-pub const DEFAULT_TEMPLATE: &str = "pages/index.njk";
-pub fn to_template_name(request_path: &str) -> String {
-    if request_path.eq("") {
-        DEFAULT_TEMPLATE.into()
-    } else {
-        format!("pages/{request_path}.njk")
-    }
+pub async fn vite_test(tmpl: Data<Tmpl>) -> HttpResponse {
+    let context = Context::new();
+    let content = tmpl.render("pages/vite.njk", &context).unwrap();
+    HttpResponse::Ok().content_type("text/html").body(content)
 }
