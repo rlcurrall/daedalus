@@ -10,7 +10,7 @@ use crate::tmpl::Tmpl;
 
 pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Error>> {
     let mut pool_manager = PoolManager::new(&settings.database);
-    let templates = Tmpl::init(settings.version.clone())?;
+    let templates = Tmpl::init(settings.version.clone(), settings.debug.clone())?;
     let ServerSettings { port, workers } = settings.server.clone();
 
     pool_manager.migrate()?;

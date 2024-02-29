@@ -12,8 +12,6 @@ pub async fn index(
     pool: Data<PoolManager>,
     tmpl: Data<Tmpl>,
 ) -> HtmlResult<HttpResponse> {
-    let _ = tmpl.reload();
-
     let UserId(id) = id.ok_or(AppError::Unauthorized)?;
     let user = block(move || {
         let conn = pool.get()?;

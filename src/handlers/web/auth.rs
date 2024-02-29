@@ -22,8 +22,6 @@ pub async fn show_login(
     tmpl: Data<Tmpl>,
     inbox: FlashInbox,
 ) -> HtmlResult<HttpResponse> {
-    let _ = tmpl.reload();
-
     if id.is_some() {
         return Ok(HttpResponse::Found()
             .append_header(("location", "/home"))
@@ -96,8 +94,6 @@ pub async fn show_register(
     tmpl: Data<Tmpl>,
     inbox: FlashInbox,
 ) -> HtmlResult<HttpResponse> {
-    let _ = tmpl.reload();
-
     if id.is_some() {
         return Ok(HttpResponse::Found()
             .append_header(("location", "/home"))

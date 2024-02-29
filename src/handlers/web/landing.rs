@@ -13,8 +13,6 @@ pub async fn index(
     pool: Data<PoolManager>,
     tmpl: Data<Tmpl>,
 ) -> HtmlResult<HttpResponse> {
-    let _ = tmpl.reload();
-
     let mut context = Context::new();
     context.insert("title", "Daedalus");
 
