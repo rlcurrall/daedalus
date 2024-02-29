@@ -25,7 +25,7 @@
     />
 
     {# Custom CSS #}
-    <link rel="stylesheet" href="{{ asset_path(name = 'style.css') }}" />
+    <link rel="stylesheet" href="/style.css?v={{ version() }}" />
 
     {# HTMX #}
     <script
@@ -36,7 +36,7 @@
 
     <script src="https://kit.fontawesome.com/ff80b2ed10.js" crossorigin="anonymous"></script>
 
-    <script type="module" src="{{ asset_path(name = 'modal.js') }}"></script>
+    <script type="module" src="/modal.js?v={{ version() }}"></script>
   </head>
 
   {% if user %}
