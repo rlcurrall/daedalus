@@ -113,7 +113,7 @@ impl tera::Function for InjectJs {
             return Ok(tera::Value::String(inject));
         }
 
-        let manifest_id = format!("resources/js/{name}");
+        let manifest_id = format!("{}/{}", self.dev_path, name);
         let manifest = self.manifest.inner.get(&manifest_id);
         match manifest {
             None => Err(tera::Error::msg(format!(

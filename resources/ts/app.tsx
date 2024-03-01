@@ -1,4 +1,4 @@
-import MyComponent from "./App";
+import MyComponent from "./MyComponent";
 import ReactDOM from "react-dom/client";
 import React from "react";
 
