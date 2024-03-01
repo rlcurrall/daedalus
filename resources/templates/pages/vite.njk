@@ -6,8 +6,22 @@
     <meta name="description" content="create-rust-app Starter Template" />
     <title>Create Rust App</title>
 
+    {# PicoCSS #}
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.orange.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css"
+    />
+
+    {# Custom CSS #}
+    <link rel="stylesheet" href="/style.css?v={{ version() }}" />
+
     {{ vite() }}
-    {{ js(name="app.js") }}
+    {{ react_refresh()}}
+    {{ js(name="app.tsx") }}
     {{ css(name="app.css") }}
     <script type="module" src="/modal.js"></script>
   </head>
