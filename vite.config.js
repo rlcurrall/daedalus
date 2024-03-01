@@ -10,12 +10,6 @@ export default defineConfig({
     react(),
   ],
 
-  resolve: {
-    alias: {
-      "@": "/resources/ts",
-    },
-  },
-
   server: {
     watch: {
       ignored: ["**/target/**", "**/node_modules/**"],
