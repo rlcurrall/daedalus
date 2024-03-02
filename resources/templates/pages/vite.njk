@@ -4,17 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="create-rust-app Starter Template" />
-    <title>Create Rust App</title>
-
-    {# PicoCSS #}
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.orange.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css"
-    />
+    <title>Vite Demo</title>
 
     {# Custom CSS #}
     <link rel="stylesheet" href="/style.css?v={{ version() }}" />
@@ -25,7 +15,7 @@
     {{ css(name="app.css") }}
     <script type="module" src="/modal.js"></script>
   </head>
-  <body>
+  <body class="min-h-screen w-screen overflow-y-auto bg-gray-900 text-white">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>

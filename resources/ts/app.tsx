@@ -1,6 +1,5 @@
 import MyComponent from "./MyComponent";
 import ReactDOM from "react-dom/client";
-import React from "react";
 
 console.log(`
     ____                 __      __
