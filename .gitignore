@@ -10,3 +10,4 @@ jwt.txt
 node_modules
 public/hot
 public/build
+tsconfig.tsbuildinfo
