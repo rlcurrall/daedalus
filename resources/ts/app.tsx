@@ -12,4 +12,6 @@ console.log(`
   Welcome to Daedalus!
 `);
 
-ReactDOM.createRoot(document.getElementById("root")).render(<MyComponent />);
+const root = document.getElementById("root");
+if (root) ReactDOM.createRoot(root).render(<MyComponent />);
+else console.error("No root element found");
