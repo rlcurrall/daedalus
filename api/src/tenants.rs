@@ -4,8 +4,9 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 
-use super::defaults::{default_bool, default_i64};
 use crate::database::{schema::tenants, DbConnection, DB};
+use crate::models::common::Paginated;
+use crate::models::defaults::{default_bool, default_i64};
 use crate::result::Result;
 
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
@@ -106,6 +107,37 @@ impl Tenant {
             .limit(page_size)
             .offset(page_size * (page - 1))
             .load::<Tenant>(conn)?)
+    }
+
+    pub fn count(
+        conn: &mut DbConnection,
+        TenantQuery { name, active, .. }: TenantQuery,
+    ) -> Result<i64> {
+        let mut query = tenants::table.into_boxed::<DB>();
+
+        if let Some(name) = name {
+            query = query.filter(tenants::name.eq(name));
+        }
+
+        if active {
+            query = query.filter(tenants::deleted_at.is_null());
+        } else {
+            query = query.filter(tenants::deleted_at.is_not_null());
+        }
+
+        Ok(query.count().get_result(conn)?)
+    }
+
+    pub fn paginate(conn: &mut DbConnection, query: TenantQuery) -> Result<Paginated<Tenant>> {
+        let total = Tenant::count(conn, query.clone())?;
+        let data = Tenant::list(conn, query.clone())?;
+
+        Ok(Paginated {
+            total,
+            page: query.page,
+            per_page: query.page_size,
+            data,
+        })
     }
 
     fn query() -> Query {

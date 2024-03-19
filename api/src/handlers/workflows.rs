@@ -3,9 +3,8 @@ use actix_web::web::{block, Data, Json, Path, Query};
 use crate::database::PoolManager;
 use crate::middleware::bearer::UserClaims;
 use crate::models::common::Paginated;
-use crate::models::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
 use crate::result::{AppError, JsonResult};
-use crate::services::workflows::WorkflowService;
+use crate::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
 
 pub async fn list(
     _: UserClaims,
@@ -13,8 +12,8 @@ pub async fn list(
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Paginated<Workflow>>> {
     let workflows = block(move || {
-        let conn = pool.get()?;
-        WorkflowService::new(conn).paginate(filter.into())
+        let mut conn = pool.get()?;
+        Workflow::paginate(&mut conn, filter.into())
     })
     .await??;
 
@@ -27,8 +26,8 @@ pub async fn create(
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Workflow>> {
     let new_workflow = block(move || {
-        let conn = pool.get()?;
-        WorkflowService::new(conn).create(request.into())
+        let mut conn = pool.get()?;
+        Workflow::create(&mut conn, request.into())
     })
     .await??;
 
@@ -42,8 +41,8 @@ pub async fn find(
 ) -> JsonResult<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
-        let conn = pool.get()?;
-        WorkflowService::new(conn).find(id)
+        let mut conn = pool.get()?;
+        Workflow::find(&mut conn, id)
     })
     .await??;
 
@@ -65,8 +64,8 @@ pub async fn update(
 ) -> JsonResult<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
-        let conn = pool.get()?;
-        WorkflowService::new(conn).update(id, request)
+        let mut conn = pool.get()?;
+        Workflow::update(&mut conn, id, request)
     })
     .await??;
 

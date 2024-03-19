@@ -8,19 +8,19 @@ use serde_json::json;
 
 use crate::config::AppSettings;
 use crate::middleware::bearer::UserClaims;
-use crate::models::users::{CreateUser, User, UserQuery};
+use crate::models::common::Paginated;
 use crate::result::{AppError, JsonResult};
-use crate::services::users::{UserCredentials, UserService};
-use crate::{database::PoolManager, models::users::UpdateUser};
+use crate::users::{CreateUser, User, UserCredentials, UserQuery};
+use crate::{database::PoolManager, users::UpdateUser};
 
 pub async fn list(
     _: UserClaims,
     Query(filter): Query<UserQuery>,
     pool: Data<PoolManager>,
-) -> JsonResult<Json<Vec<User>>> {
+) -> JsonResult<Json<Paginated<User>>> {
     let users = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn).list(filter)
+        let mut conn = pool.get()?;
+        User::paginate(&mut conn, filter)
     })
     .await??;
 
@@ -32,8 +32,8 @@ pub async fn create(
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<User>> {
     let new_user = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn).create(request)
+        let mut conn = pool.get()?;
+        User::create(&mut conn, request)
     })
     .await??;
 
@@ -48,8 +48,8 @@ pub async fn update(
 ) -> JsonResult<Json<User>> {
     let id = id.into_inner();
     let updated_user = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn).update(id, request)
+        let mut conn = pool.get()?;
+        User::update(&mut conn, id, request)
     })
     .await??;
 
@@ -63,8 +63,8 @@ pub async fn authenticate(
     _req: HttpRequest,
 ) -> JsonResult<Json<serde_json::Value>> {
     let user = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn).authenticate(request)
+        let mut conn = pool.get()?;
+        User::authenticate(&mut conn, request)
     })
     .await??;
 
@@ -87,10 +87,8 @@ pub async fn authenticate(
 
 pub async fn me(claims: UserClaims, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let user = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn)
-            .find(claims.sub)?
-            .ok_or(AppError::Unauthorized)
+        let mut conn = pool.get()?;
+        User::find(&mut conn, claims.sub)?.ok_or(AppError::Unauthorized)
     })
     .await??;
 
@@ -100,8 +98,8 @@ pub async fn me(claims: UserClaims, pool: Data<PoolManager>) -> JsonResult<Json<
 pub async fn find(_: UserClaims, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<User>> {
     let id = id.into_inner();
     let user = block(move || {
-        let conn = pool.get()?;
-        UserService::new(conn).find(id)?.ok_or(AppError::NotFound {
+        let mut conn = pool.get()?;
+        User::find(&mut conn, id)?.ok_or(AppError::NotFound {
             entity: "User".to_string(),
             id: id.to_string(),
         })

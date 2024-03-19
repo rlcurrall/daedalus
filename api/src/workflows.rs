@@ -10,9 +10,9 @@ use serde::{Deserialize, Serialize};
 use tsync::tsync;
 use uuid::Uuid;
 
-use super::common::Paginated;
-use super::defaults::{default_bool, default_i32, default_i64};
 use crate::database::{schema::workflows, DbConnection, DB};
+use crate::models::common::Paginated;
+use crate::models::defaults::{default_bool, default_i32, default_i64};
 use crate::result::AppError;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
