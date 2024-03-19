@@ -154,12 +154,12 @@ pub struct AppSettings {
 }
 
 #[derive(Debug)]
-pub struct Config {
+pub struct ConfigBuilder {
     version: String,
     overrides: HashMap<String, String>,
 }
 
-impl Config {
+impl ConfigBuilder {
     pub fn new(version: String) -> Self {
         Self {
             version,
@@ -443,13 +443,13 @@ fn default_log_format() -> LogFormat {
     LogFormat::Json
 }
 
-fn obfuscate_string<T, S>(value: T, serializer: S) -> std::result::Result<S::Ok, S::Error>
+fn obfuscate_string<T, S>(_: T, serializer: S) -> std::result::Result<S::Ok, S::Error>
 where
     T: AsRef<[u8]>,
     S: Serializer,
 {
     let mut obfuscated = String::new();
-    value.as_ref().iter().for_each(|_| obfuscated.push('*'));
+    [0..10].iter().for_each(|_| obfuscated.push('*'));
 
     serializer.serialize_str(&obfuscated)
 }

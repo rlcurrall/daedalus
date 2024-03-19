@@ -8,7 +8,6 @@ use result::AppError;
 
 pub mod config;
 pub mod database;
-pub(crate) mod embedded;
 pub mod handlers;
 pub mod middleware;
 pub mod models;
@@ -16,7 +15,6 @@ pub mod result;
 pub mod routes;
 pub mod server;
 pub mod services;
-pub mod tmpl;
 
 pub struct UserId(i64);
 
