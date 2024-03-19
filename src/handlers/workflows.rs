@@ -1,14 +1,14 @@
 use actix_web::web::{block, Data, Json, Path, Query};
 
 use crate::database::PoolManager;
+use crate::middleware::bearer::UserClaims;
 use crate::models::common::Paginated;
 use crate::models::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
 use crate::result::{AppError, JsonResult};
 use crate::services::workflows::WorkflowService;
-use crate::UserId;
 
 pub async fn list(
-    _: UserId,
+    _: UserClaims,
     Query(filter): Query<WorkflowQuery>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Paginated<Workflow>>> {
@@ -22,7 +22,7 @@ pub async fn list(
 }
 
 pub async fn create(
-    _: UserId,
+    _: UserClaims,
     Json(request): Json<NewWorkflow>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Workflow>> {
@@ -35,7 +35,11 @@ pub async fn create(
     Ok(Json(new_workflow))
 }
 
-pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> JsonResult<Json<Workflow>> {
+pub async fn find(
+    _: UserClaims,
+    id: Path<i64>,
+    pool: Data<PoolManager>,
+) -> JsonResult<Json<Workflow>> {
     let id = id.into_inner();
     let workflow = block(move || {
         let conn = pool.get()?;
@@ -54,7 +58,7 @@ pub async fn find(_: UserId, id: Path<i64>, pool: Data<PoolManager>) -> JsonResu
 }
 
 pub async fn update(
-    _: UserId,
+    _: UserClaims,
     id: Path<i64>,
     Json(request): Json<UpdateWorkflow>,
     pool: Data<PoolManager>,

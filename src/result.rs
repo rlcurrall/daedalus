@@ -1,6 +1,5 @@
 use std::time::SystemTimeError;
 
-use actix_identity::error::LoginError;
 use actix_web::error::{self, BlockingError};
 use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
@@ -173,12 +172,6 @@ impl From<BlockingError> for AppError {
     }
 }
 
-impl From<LoginError> for AppError {
-    fn from(_: LoginError) -> AppError {
-        AppError::Unauthorized
-    }
-}
-
 impl From<config::ConfigError> for AppError {
     fn from(err: config::ConfigError) -> AppError {
         AppError::server_error(err.to_string())
@@ -261,12 +254,6 @@ impl From<BlockingError> for JsonErrorResponse {
     }
 }
 
-impl From<LoginError> for JsonErrorResponse {
-    fn from(err: LoginError) -> Self {
-        JsonErrorResponse(AppError::from(err))
-    }
-}
-
 impl From<jsonwebtoken::errors::Error> for JsonErrorResponse {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         JsonErrorResponse(AppError::from(err))
@@ -276,104 +263,5 @@ impl From<jsonwebtoken::errors::Error> for JsonErrorResponse {
 impl From<SystemTimeError> for JsonErrorResponse {
     fn from(err: SystemTimeError) -> Self {
         JsonErrorResponse(AppError::from(err))
-    }
-}
-
-#[derive(Clone, Debug, Display)]
-pub struct HtmlErrorResponse(pub AppError);
-pub type HtmlResult<T> = std::result::Result<T, HtmlErrorResponse>;
-
-impl HtmlErrorResponse {
-    pub fn to_html(&self) -> String {
-        format!(
-            r#"<html>
-                <head>
-                    <title>Error</title>
-                </head>
-                <body>
-                    <h1>Error - {}</h1>
-                    <p>{}</p>
-                </body>
-            </html>"#,
-            self.0.status_code().as_str(),
-            self.0.to_string()
-        )
-    }
-}
-
-impl error::ResponseError for HtmlErrorResponse {
-    fn error_response(&self) -> HttpResponse {
-        match self.0 {
-            AppError::Unauthorized => HttpResponse::Found()
-                .append_header(("location", "/login"))
-                .finish(),
-            _ => HttpResponse::build(self.0.status_code()).body(self.to_html()),
-        }
-    }
-}
-
-impl From<AppError> for HtmlErrorResponse {
-    fn from(err: AppError) -> Self {
-        HtmlErrorResponse(err)
-    }
-}
-
-impl From<argon2::Error> for HtmlErrorResponse {
-    fn from(err: argon2::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<argon2::password_hash::Error> for HtmlErrorResponse {
-    fn from(err: argon2::password_hash::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<diesel::result::Error> for HtmlErrorResponse {
-    fn from(err: diesel::result::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<std::io::Error> for HtmlErrorResponse {
-    fn from(err: std::io::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<HtmlErrorResponse> for std::io::Error {
-    fn from(err: HtmlErrorResponse) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::Other, err.to_string())
-    }
-}
-
-impl From<diesel::r2d2::Error> for HtmlErrorResponse {
-    fn from(err: diesel::r2d2::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<BlockingError> for HtmlErrorResponse {
-    fn from(err: BlockingError) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<LoginError> for HtmlErrorResponse {
-    fn from(err: LoginError) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<jsonwebtoken::errors::Error> for HtmlErrorResponse {
-    fn from(err: jsonwebtoken::errors::Error) -> Self {
-        HtmlErrorResponse(AppError::from(err))
-    }
-}
-
-impl From<SystemTimeError> for HtmlErrorResponse {
-    fn from(err: SystemTimeError) -> Self {
-        HtmlErrorResponse(AppError::from(err))
     }
 }
