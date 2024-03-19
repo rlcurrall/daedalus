@@ -54,7 +54,7 @@ fn parse_args() -> Result<AppSettings> {
 
     let serve_cmd = Serve::parse();
 
-    let mut config = ConfigBuilder::new(version.into());
+    let mut config = ConfigBuilder::new(version.into(), serve_cmd.config);
 
     if let Some(name) = serve_cmd.name {
         config = config.set_name(name.to_string());
@@ -62,19 +62,19 @@ fn parse_args() -> Result<AppSettings> {
     if let Some(debug) = serve_cmd.debug {
         config = config.set_debug(debug);
     }
-    if let Some(db_url) = serve_cmd.db_url {
+    if let Some(db_url) = serve_cmd.database_url {
         config = config.set_db_url(db_url.to_string());
     }
-    if let Some(db_max_conns) = serve_cmd.db_max_conns {
+    if let Some(db_max_conns) = serve_cmd.database_max_conns {
         config = config.set_db_max_connections(db_max_conns);
     }
-    if let Some(db_conn_timeout) = serve_cmd.db_conn_timeout {
+    if let Some(db_conn_timeout) = serve_cmd.database_conn_timeout {
         config = config.set_db_conn_timeout(db_conn_timeout);
     }
-    if let Some(db_idle_timeout) = serve_cmd.db_idle_timeout {
+    if let Some(db_idle_timeout) = serve_cmd.database_idle_timeout {
         config = config.set_db_idle_timeout(db_idle_timeout);
     }
-    if let Some(db_thread_size) = serve_cmd.db_thread_size {
+    if let Some(db_thread_size) = serve_cmd.database_thread_size {
         config = config.set_db_thread_size(db_thread_size);
     }
     if let Some(log_level) = serve_cmd.log_level {
@@ -102,15 +102,6 @@ fn parse_args() -> Result<AppSettings> {
     if let Some(server_workers) = serve_cmd.server_workers {
         config = config.set_server_workers(server_workers);
     }
-    if let Some(session_secret) = serve_cmd.session_secret {
-        config = config.set_session_secret(session_secret);
-    }
-    if let Some(session_secure) = serve_cmd.session_secure {
-        config = config.set_session_secure(session_secure);
-    }
-    if let Some(session_lifetime) = serve_cmd.session_lifetime {
-        config = config.set_session_lifetime(session_lifetime);
-    }
 
     config.parse()
 }
@@ -129,20 +120,22 @@ Daedalus application server
 #[derive(clap::Parser)]
 #[clap(name = "daedalus", about = ABOUT)]
 pub struct Serve {
+    #[clap(short, long)]
+    pub config: Option<String>,
     #[clap(short = 'n', long)]
     pub name: Option<String>,
     #[clap(short = 'd', long)]
     pub debug: Option<bool>,
     #[clap(short = 'D', long)]
-    pub db_url: Option<String>,
+    pub database_url: Option<String>,
     #[clap(long)]
-    pub db_max_conns: Option<u32>,
+    pub database_max_conns: Option<u32>,
     #[clap(long)]
-    pub db_conn_timeout: Option<u64>,
+    pub database_conn_timeout: Option<u64>,
     #[clap(long)]
-    pub db_idle_timeout: Option<u64>,
+    pub database_idle_timeout: Option<u64>,
     #[clap(long)]
-    pub db_thread_size: Option<u32>,
+    pub database_thread_size: Option<u32>,
     #[clap(long)]
     pub log_level: Option<LogLevel>,
     #[clap(long)]
@@ -157,12 +150,6 @@ pub struct Serve {
     pub server_port: Option<u16>,
     #[clap(short = 'w', long)]
     pub server_workers: Option<usize>,
-    #[clap(long)]
-    pub session_secret: Option<String>,
-    #[clap(long)]
-    pub session_secure: Option<bool>,
-    #[clap(long)]
-    pub session_lifetime: Option<u64>,
 }
 
 fn print_error(e: AppError) {

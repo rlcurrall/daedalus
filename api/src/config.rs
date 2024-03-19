@@ -13,11 +13,11 @@ use crate::result::{AppError, Result};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct JwtSettings {
     /// The path to the public key used to verify JWT tokens.
-    /// This field is required.
+    #[serde(default = "default_jwt_pub_key")]
     pub pub_key: PathBuf,
 
     /// The path to the private key used to sign JWT tokens.
-    /// This field is required.
+    #[serde(default = "default_jwt_priv_key")]
     pub priv_key: PathBuf,
 
     /// Lifetime of the JWT token in seconds.
@@ -100,26 +100,6 @@ pub struct ServerSettings {
     pub workers: usize,
 }
 
-#[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SessionSettings {
-    /// The secret used to sign the session cookie.
-    /// This field is required.
-    #[serde(serialize_with = "obfuscate_string")]
-    pub secret: String,
-
-    /// If the cookie should be secure.
-    /// The default is true.
-    #[serde(default = "default_bool::<true>")]
-    pub secure: bool,
-
-    /// The maximum lifetime of a session.
-    /// The default is 7200 seconds.
-    #[serde_as(as = "DurationSeconds<u64>")]
-    #[serde(default = "default_duration::<7200>")]
-    pub lifetime: Duration,
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AppSettings {
     /// The version of the application.
@@ -136,6 +116,7 @@ pub struct AppSettings {
     pub debug: bool,
 
     /// The settings for JWT.
+    #[serde(default)]
     pub jwt: JwtSettings,
 
     /// The settings for the database.
@@ -148,22 +129,21 @@ pub struct AppSettings {
     /// The settings for the server.
     #[serde(default)]
     pub server: ServerSettings,
-
-    /// The settings for the session.
-    pub session: SessionSettings,
 }
 
 #[derive(Debug)]
 pub struct ConfigBuilder {
     version: String,
     overrides: HashMap<String, String>,
+    config_file: String,
 }
 
 impl ConfigBuilder {
-    pub fn new(version: String) -> Self {
+    pub fn new(version: String, config_file: Option<String>) -> Self {
         Self {
             version,
             overrides: HashMap::new(),
+            config_file: config_file.unwrap_or_else(|| "daedalus.toml".to_string()),
         }
     }
 
@@ -267,28 +247,10 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn set_session_secret(mut self, secret: String) -> Self {
-        self.overrides
-            .insert("session.secret".to_string(), secret.to_string());
-        self
-    }
-
-    pub fn set_session_lifetime(mut self, lifetime: u64) -> Self {
-        self.overrides
-            .insert("session.lifetime".to_string(), lifetime.to_string());
-        self
-    }
-
-    pub fn set_session_secure(mut self, secure: bool) -> Self {
-        self.overrides
-            .insert("session.secure".to_string(), secure.to_string());
-        self
-    }
-
     pub fn parse(self) -> Result<AppSettings> {
         let mut builder = RustConfig::builder()
             .add_source(
-                File::with_name("daedalus.toml")
+                File::with_name(&self.config_file)
                     .required(false)
                     .format(config::FileFormat::Toml),
             )
@@ -319,8 +281,18 @@ impl Default for ServerSettings {
 impl Default for LogSettings {
     fn default() -> Self {
         Self {
-            level: LogLevel::Info,
-            format: LogFormat::Json,
+            level: default_log_level(),
+            format: default_log_format(),
+        }
+    }
+}
+
+impl Default for JwtSettings {
+    fn default() -> Self {
+        Self {
+            pub_key: default_jwt_pub_key(),
+            priv_key: default_jwt_priv_key(),
+            lifetime: default_duration::<3600>(),
         }
     }
 }
@@ -441,6 +413,14 @@ fn default_log_level() -> LogLevel {
 
 fn default_log_format() -> LogFormat {
     LogFormat::Json
+}
+
+fn default_jwt_pub_key() -> PathBuf {
+    PathBuf::from("./conf/public.pem")
+}
+
+fn default_jwt_priv_key() -> PathBuf {
+    PathBuf::from("./conf/private.pem")
 }
 
 fn obfuscate_string<T, S>(_: T, serializer: S) -> std::result::Result<S::Ok, S::Error>
