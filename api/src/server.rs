@@ -3,9 +3,9 @@ use actix_web::web::Data;
 use actix_web::{App, HttpServer};
 use tracing_actix_web::TracingLogger;
 
+use crate::api::api_routes;
 use crate::config::{AppSettings, ServerSettings};
 use crate::database::PoolManager;
-use crate::routes::api_routes;
 
 pub async fn start(settings: AppSettings) -> Result<(), Box<dyn std::error::Error>> {
     let mut pool_manager = PoolManager::new(&settings.database);
