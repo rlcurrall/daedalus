@@ -34,6 +34,3 @@ uuid = { version = "1.6.1", features = ["serde", "v7"] }
 [build-dependencies]
 rand = "0.8.5"
 
-[[bin]]
-name = "tsync"
-path = ".cargo/tsync.rs"

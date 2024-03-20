@@ -8,19 +8,19 @@ import {
   DialogBody,
   DialogDescription,
   DialogTitle,
-} from "@/catalyst/dialog";
-import { Text } from "@/catalyst/text";
+} from "@/components/general/dialog";
+import { Text } from "@/components/general/text";
 import { useEffect, useState } from "react";
-import { Button } from "@/catalyst/button";
-import { Input } from "@/catalyst/input";
+import { Button } from "@/components/general/button";
+import { Input } from "@/components/general/input";
 import {
   ErrorMessage,
   Field,
   FieldGroup,
   Fieldset,
   Label,
-} from "@/catalyst/fieldset";
-import { Select } from "@/catalyst/select";
+} from "@/components/general/fieldset";
+import { Select } from "@/components/general/select";
 
 export default function WorkflowState({
   data: state,
