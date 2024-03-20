@@ -1,11 +1,9 @@
-use std::{path::PathBuf, str::FromStr};
-
 use clap::Parser;
 use console::style;
 use tracing_subscriber::{self, filter::Targets, layer::SubscriberExt, util::SubscriberInitExt};
 
 use daedalus::config::{AppSettings, ConfigBuilder, LogFormat, LogLevel};
-use daedalus::result::{AppError, Result};
+use daedalus::result::Result;
 use daedalus::server;
 
 #[actix_web::main]
@@ -13,7 +11,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let app_settings = match parse_args() {
         Ok(settings) => settings,
         Err(e) => {
-            print_error(e);
+            eprintln!(
+                "{}\n\n\t{}\n",
+                style("Failed to parse configuration:").bold().red(),
+                e
+            );
             std::process::exit(1);
         }
     };
@@ -53,54 +55,21 @@ fn parse_args() -> Result<AppSettings> {
     let version = env!("BUILD_ID");
 
     let serve_cmd = Serve::parse();
-
-    let mut config = ConfigBuilder::new(version.into(), serve_cmd.config);
-
-    if let Some(debug) = serve_cmd.debug {
-        config = config.set_debug(debug);
-    }
-    if let Some(db_url) = serve_cmd.database_url {
-        config = config.set_db_url(db_url.to_string());
-    }
-    if let Some(db_max_conns) = serve_cmd.database_max_conns {
-        config = config.set_db_max_connections(db_max_conns);
-    }
-    if let Some(db_conn_timeout) = serve_cmd.database_conn_timeout {
-        config = config.set_db_conn_timeout(db_conn_timeout);
-    }
-    if let Some(db_idle_timeout) = serve_cmd.database_idle_timeout {
-        config = config.set_db_idle_timeout(db_idle_timeout);
-    }
-    if let Some(db_thread_size) = serve_cmd.database_thread_size {
-        config = config.set_db_thread_size(db_thread_size);
-    }
-    if let Some(log_level) = serve_cmd.log_level {
-        config = config.set_log_level(log_level.to_owned());
-    }
-    if let Some(log_format) = serve_cmd.log_format {
-        config = config.set_log_format(log_format.to_owned());
-    }
-    if let Some(jwt_pub_key) = serve_cmd.jwt_pub_key {
-        config = config.set_jwt_pub_key(
-            &PathBuf::from_str(&jwt_pub_key).map_err(|e| AppError::server_error(e))?,
-        );
-    }
-    if let Some(jwt_priv_key) = serve_cmd.jwt_priv_key {
-        config = config.set_jwt_priv_key(
-            &PathBuf::from_str(&jwt_priv_key).map_err(|e| AppError::server_error(e))?,
-        );
-    }
-    if let Some(jwt_lifetime) = serve_cmd.jwt_lifetime {
-        config = config.set_jwt_lifetime(jwt_lifetime);
-    }
-    if let Some(server_port) = serve_cmd.server_port {
-        config = config.set_server_port(server_port);
-    }
-    if let Some(server_workers) = serve_cmd.server_workers {
-        config = config.set_server_workers(server_workers);
-    }
-
-    config.parse()
+    ConfigBuilder::new(version.into(), serve_cmd.config)
+        .set_debug(serve_cmd.debug)
+        .set_db_url(serve_cmd.database_url)
+        .set_db_max_conns(serve_cmd.database_max_conns)
+        .set_db_conn_timeout(serve_cmd.database_conn_timeout)
+        .set_db_idle_timeout(serve_cmd.database_idle_timeout)
+        .set_db_thread_size(serve_cmd.database_thread_size)
+        .set_log_level(serve_cmd.log_level)
+        .set_log_format(serve_cmd.log_format)
+        .set_jwt_pub_key(serve_cmd.jwt_pub_key)
+        .set_jwt_priv_key(serve_cmd.jwt_priv_key)
+        .set_jwt_lifetime(serve_cmd.jwt_lifetime)
+        .set_server_port(serve_cmd.server_port)
+        .set_server_workers(serve_cmd.server_workers)
+        .parse()
 }
 
 const ABOUT: &str = r#"
@@ -145,12 +114,4 @@ pub struct Serve {
     pub server_port: Option<u16>,
     #[clap(short = 'w', long)]
     pub server_workers: Option<usize>,
-}
-
-fn print_error(e: AppError) {
-    eprintln!(
-        "{}\n\n\t{}\n",
-        style("Failed to parse configuration:").bold().red(),
-        e
-    );
 }

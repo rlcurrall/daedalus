@@ -172,23 +172,6 @@ impl From<BlockingError> for AppError {
     }
 }
 
-impl From<config::ConfigError> for AppError {
-    fn from(err: config::ConfigError) -> AppError {
-        // AppError::server_error(err.to_string())
-        match err {
-            config::ConfigError::NotFound(field) => {
-                AppError::server_error(format!("Not found: {field}"))
-            }
-            config::ConfigError::Frozen => todo!(),
-            config::ConfigError::PathParse(_) => todo!(),
-            config::ConfigError::FileParse { .. } => todo!(),
-            config::ConfigError::Type { .. } => todo!(),
-            config::ConfigError::Message(msg) => AppError::server_error(format!("Message: {msg}")),
-            config::ConfigError::Foreign(_) => todo!(),
-        }
-    }
-}
-
 impl From<jsonwebtoken::errors::Error> for AppError {
     fn from(err: jsonwebtoken::errors::Error) -> AppError {
         AppError::server_error(err.to_string())

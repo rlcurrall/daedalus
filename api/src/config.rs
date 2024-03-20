@@ -1,36 +1,44 @@
 use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
 
 use clap::ValueEnum;
-use config::{Config as RustConfig, Environment, File};
-use serde::{Deserialize, Serialize, Serializer};
+use figment::{
+    providers::{Format, Serialized, Toml},
+    Figment,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use serde_with::{serde_as, DurationSeconds};
 
 use crate::result::{AppError, Result};
 
-// region: JWT settings
-#[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct JwtSettings {
-    /// The path to the public key used to verify JWT tokens.
-    pub pub_key: PathBuf,
+#[derive(Clone, Debug, Deserialize)]
+pub struct AppSettings {
+    /// The version of the application.
+    /// This field is required.
+    pub version: String,
 
-    /// The path to the private key used to sign JWT tokens.
-    pub priv_key: PathBuf,
+    /// If the application is in debug mode.
+    /// The default is false.
+    pub debug: bool,
 
-    /// Lifetime of the JWT token in seconds.
-    /// The default is 3600 seconds.
-    #[serde_as(as = "DurationSeconds<u64>")]
-    pub lifetime: Duration,
+    /// The settings for JWT.
+    pub jwt: JwtSettings,
+
+    /// The settings for the database.
+    pub database: DatabaseSettings,
+
+    /// The settings for logging and tracing.
+    pub log: LogSettings,
+
+    /// The settings for the server.
+    pub server: ServerSettings,
 }
-// endregion
 
-// region: Database settings
 #[serde_as]
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct DatabaseSettings {
     /// The URL of the database.
     /// This field is required.
-    #[serde(serialize_with = "obfuscate_string")]
     pub url: String,
 
     /// The maximum number of connections allowed in the pool.
@@ -51,9 +59,39 @@ pub struct DatabaseSettings {
     /// The default is 3.
     pub thread_pool_size: u32,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ServerSettings {
+    /// The port to bind the server to.
+    /// The default is 8080.
+    pub port: u16,
+
+    /// The number of worker threads to use.
+    /// The default is 4.
+    pub workers: usize,
+}
+
+// region: JWT settings
+
+#[serde_as]
+#[derive(Clone, Debug, Deserialize)]
+pub struct JwtSettings {
+    /// The path to the public key used to verify JWT tokens.
+    pub pub_key: PathBuf,
+
+    /// The path to the private key used to sign JWT tokens.
+    pub priv_key: PathBuf,
+
+    /// Lifetime of the JWT token in seconds.
+    /// The default is 3600 seconds.
+    #[serde_as(as = "DurationSeconds<u64>")]
+    pub lifetime: Duration,
+}
+
 // endregion
 
 // region: Log settings
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, ValueEnum, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
@@ -144,7 +182,7 @@ impl Display for LogFormat {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct LogSettings {
     /// The level of the log.
     /// The default is "info".
@@ -154,48 +192,29 @@ pub struct LogSettings {
     /// The default is "json".
     pub format: LogFormat,
 }
+
 // endregion
 
-// region: Server settings
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ServerSettings {
-    /// The port to bind the server to.
-    /// The default is 8080.
-    pub port: u16,
+// region: config builder
 
-    /// The number of worker threads to use.
-    /// The default is 4.
-    pub workers: usize,
-}
-// endregion
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct AppSettings {
-    /// The version of the application.
-    /// This field is required.
-    pub version: String,
-
-    /// If the application is in debug mode.
-    /// The default is false.
-    pub debug: bool,
-
-    /// The settings for JWT.
-    pub jwt: JwtSettings,
-
-    /// The settings for the database.
-    pub database: DatabaseSettings,
-
-    /// The settings for logging and tracing.
-    pub log: LogSettings,
-
-    /// The settings for the server.
-    pub server: ServerSettings,
-}
+const DEBUG: &'static str = "debug";
+const DB_URL: &'static str = "database.url";
+const DB_MAX_CONNS: &'static str = "database.max_connections";
+const DB_IDLE_TIMEOUT: &'static str = "database.idle_timeout";
+const DB_CONN_TIMEOUT: &'static str = "database.connection_timeout";
+const DB_THREAD_SIZE: &'static str = "database.thread_pool_size";
+const JWT_PUB_KEY: &'static str = "jwt.pub_key";
+const JWT_PRIV_KEY: &'static str = "jwt.priv_key";
+const JWT_LIFETIME: &'static str = "jwt.lifetime";
+const LOG_LEVEL: &'static str = "log.level";
+const LOG_FORMAT: &'static str = "log.format";
+const SERVER_PORT: &'static str = "server.port";
+const SERVER_WORKERS: &'static str = "server.workers";
 
 #[derive(Debug)]
 pub struct ConfigBuilder {
     version: String,
-    overrides: HashMap<String, String>,
+    overrides: HashMap<String, Value>,
     config_file: String,
 }
 
@@ -208,149 +227,122 @@ impl ConfigBuilder {
         }
     }
 
-    pub fn with_overrides(mut self, overrides: HashMap<String, String>) -> Self {
-        self.overrides = overrides;
+    pub fn set_debug(mut self, debug: Option<bool>) -> Self {
+        self.overrides.insert(DEBUG.into(), Value::from(debug));
         self
     }
 
-    pub fn set_debug(mut self, debug: bool) -> Self {
+    pub fn set_db_url(mut self, db_url: Option<String>) -> Self {
+        self.overrides.insert(DB_URL.into(), Value::from(db_url));
+        self
+    }
+
+    pub fn set_db_max_conns(mut self, db_max_conns: Option<u32>) -> Self {
         self.overrides
-            .insert("debug".to_string(), debug.to_string());
+            .insert(DB_MAX_CONNS.into(), Value::from(db_max_conns));
         self
     }
 
-    pub fn set_db_url(mut self, url: String) -> Self {
+    pub fn set_db_idle_timeout(mut self, db_idle_timeout: Option<u64>) -> Self {
         self.overrides
-            .insert("database.url".to_string(), url.to_string());
+            .insert(DB_IDLE_TIMEOUT.into(), Value::from(db_idle_timeout));
         self
     }
 
-    pub fn set_db_max_connections(mut self, max_connections: u32) -> Self {
+    pub fn set_db_conn_timeout(mut self, db_conn_timeout: Option<u64>) -> Self {
+        self.overrides
+            .insert(DB_CONN_TIMEOUT.into(), Value::from(db_conn_timeout));
+        self
+    }
+
+    pub fn set_db_thread_size(mut self, db_thread_size: Option<u32>) -> Self {
+        self.overrides
+            .insert(DB_THREAD_SIZE.into(), Value::from(db_thread_size));
+        self
+    }
+
+    pub fn set_jwt_pub_key(mut self, jwt_pub_key: Option<String>) -> Self {
+        self.overrides
+            .insert(JWT_PUB_KEY.into(), Value::from(jwt_pub_key));
+        self
+    }
+
+    pub fn set_jwt_priv_key(mut self, jwt_priv_key: Option<String>) -> Self {
+        self.overrides
+            .insert(JWT_PRIV_KEY.into(), Value::from(jwt_priv_key));
+        self
+    }
+
+    pub fn set_jwt_lifetime(mut self, jwt_lifetime: Option<u64>) -> Self {
+        self.overrides
+            .insert(JWT_LIFETIME.into(), Value::from(jwt_lifetime));
+        self
+    }
+
+    pub fn set_log_level(mut self, log_level: Option<LogLevel>) -> Self {
         self.overrides.insert(
-            "database.max_connections".to_string(),
-            max_connections.to_string(),
+            LOG_LEVEL.into(),
+            Value::from(log_level.map(|l| l.to_string())),
         );
         self
     }
 
-    pub fn set_db_idle_timeout(mut self, idle_timeout: u64) -> Self {
+    pub fn set_log_format(mut self, log_format: Option<LogFormat>) -> Self {
         self.overrides.insert(
-            "database.idle_timeout".to_string(),
-            idle_timeout.to_string(),
+            LOG_FORMAT.into(),
+            Value::from(log_format.map(|l| l.to_string())),
         );
         self
     }
 
-    pub fn set_db_conn_timeout(mut self, conn_timeout: u64) -> Self {
-        self.overrides.insert(
-            "database.connection_timeout".to_string(),
-            conn_timeout.to_string(),
-        );
-        self
-    }
-
-    pub fn set_db_thread_size(mut self, thread_size: u32) -> Self {
-        self.overrides.insert(
-            "database.thread_pool_size".to_string(),
-            thread_size.to_string(),
-        );
-        self
-    }
-
-    pub fn set_jwt_pub_key(mut self, pub_key: &PathBuf) -> Self {
-        self.overrides.insert(
-            "jwt.pub_key".to_string(),
-            pub_key.to_string_lossy().to_string(),
-        );
-        self
-    }
-
-    pub fn set_jwt_priv_key(mut self, priv_key: &PathBuf) -> Self {
-        self.overrides.insert(
-            "jwt.priv_key".to_string(),
-            priv_key.to_string_lossy().to_string(),
-        );
-        self
-    }
-
-    pub fn set_jwt_lifetime(mut self, lifetime: u64) -> Self {
+    pub fn set_server_port(mut self, server_port: Option<u16>) -> Self {
         self.overrides
-            .insert("jwt.lifetime".to_string(), lifetime.to_string());
+            .insert(SERVER_PORT.into(), Value::from(server_port));
         self
     }
 
-    pub fn set_log_level(mut self, level: LogLevel) -> Self {
+    pub fn set_server_workers(mut self, server_workers: Option<usize>) -> Self {
         self.overrides
-            .insert("log.level".to_string(), level.to_string());
-        self
-    }
-
-    pub fn set_log_format(mut self, format: LogFormat) -> Self {
-        self.overrides
-            .insert("log.format".to_string(), format.to_string());
-        self
-    }
-
-    pub fn set_server_port(mut self, port: u16) -> Self {
-        self.overrides
-            .insert("server.port".to_string(), port.to_string());
-        self
-    }
-
-    pub fn set_server_workers(mut self, workers: usize) -> Self {
-        self.overrides
-            .insert("server.workers".to_string(), workers.to_string());
+            .insert(SERVER_WORKERS.into(), Value::from(server_workers));
         self
     }
 
     pub fn parse(self) -> Result<AppSettings> {
-        let mut builder = RustConfig::builder()
-            .set_default("debug", false)?
-            .set_default("jwt.pub_key", "./conf/public.pem")?
-            .set_default("jwt.priv_key", "./conf/private.pem")?
-            .set_default("jwt.lifetime", 3600)?
-            .set_default("database.max_connections", 10)?
-            .set_default("database.idle_timeout", 600)?
-            .set_default("database.connection_timeout", 30)?
-            .set_default("database.thread_pool_size", 3)?
-            .set_default("log.level", LogLevel::default().to_string())?
-            .set_default("log.format", LogFormat::default().to_string())?
-            .set_default("server.port", 8080)?
-            .set_default("server.workers", 4)?
-            .add_source(
-                File::with_name(&self.config_file)
-                    .required(false)
-                    .format(config::FileFormat::Toml),
-            )
-            .add_source(
-                Environment::with_prefix("DA")
-                    .separator("_")
-                    .list_separator(" "),
-            )
-            .set_override("version", self.version)?;
+        // Initialize with defaults
+        let mut fig = Figment::new()
+            .merge(Serialized::default("version", self.version.clone()))
+            .merge(Serialized::default(DEBUG, false))
+            .merge(Serialized::default(JWT_PUB_KEY, "./conf/public.pem"))
+            .merge(Serialized::default(JWT_PRIV_KEY, "./conf/private.pem"))
+            .merge(Serialized::default(JWT_LIFETIME, 3600))
+            .merge(Serialized::default(DB_MAX_CONNS, 10))
+            .merge(Serialized::default(DB_IDLE_TIMEOUT, 600))
+            .merge(Serialized::default(DB_CONN_TIMEOUT, 30))
+            .merge(Serialized::default(DB_THREAD_SIZE, 3))
+            .merge(Serialized::default(LOG_LEVEL, LogLevel::default()))
+            .merge(Serialized::default(LOG_FORMAT, LogFormat::default()))
+            .merge(Serialized::default(SERVER_PORT, 8080))
+            .merge(Serialized::default(SERVER_WORKERS, 4));
 
+        // Add the config file source
+        fig = fig.merge(Toml::file(self.config_file.clone()));
+
+        // Add the overrides, skipping null values
         for (key, value) in self.overrides {
-            builder = builder.set_override(&key, value)?;
+            if value.is_null() {
+                continue;
+            }
+            fig = fig.merge(Serialized::default(&key, value));
         }
 
-        Ok(builder
-            .build()
-            .map_err(|e| {
-                println!("Oops #1 Error: {:?}", e);
-                e
-            })?
-            .try_deserialize()
-            .map_err(|e| {
-                println!("Oops #2 Error: {:?}", e);
-                e
-            })?)
+        fig.extract::<AppSettings>()
+            .map_err(|e| match e.kind.clone() {
+                figment::error::Kind::MissingField(k) => {
+                    AppError::server_error(format!("Missing Field: {}.{}", e.path.join("."), k))
+                }
+                _ => AppError::server_error(format!("Error: {}", e)),
+            })
     }
 }
 
-fn obfuscate_string<T, S>(_: T, serializer: S) -> std::result::Result<S::Ok, S::Error>
-where
-    T: AsRef<[u8]>,
-    S: Serializer,
-{
-    serializer.serialize_str("**********")
-}
+// endregion
