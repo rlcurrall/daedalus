@@ -8,19 +8,28 @@ use serde_json::json;
 
 use crate::config::AppSettings;
 use crate::middleware::bearer::UserClaims;
-use crate::models::common::Paginated;
 use crate::result::{AppError, JsonResult};
 use crate::users::{CreateUser, User, UserCredentials, UserQuery};
 use crate::{database::PoolManager, users::UpdateUser};
+
+use super::Paginated;
 
 pub async fn list(
     _: UserClaims,
     Query(filter): Query<UserQuery>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Paginated<User>>> {
-    let users = block(move || {
+    let users = block(move || -> Result<_, AppError> {
         let mut conn = pool.get()?;
-        User::paginate(&mut conn, filter)
+        let total = User::count(&mut conn, filter.clone())?;
+        let data = User::list(&mut conn, filter.clone())?;
+
+        Ok(Paginated {
+            total,
+            page: filter.page,
+            per_page: filter.page_size,
+            data,
+        })
     })
     .await??;
 

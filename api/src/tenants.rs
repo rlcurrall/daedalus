@@ -1,12 +1,10 @@
 use chrono::{DateTime, Utc};
-use diesel::helper_types::{AsSelect, Filter, Select};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 
 use crate::database::{schema::tenants, DbConnection, DB};
-use crate::models::common::Paginated;
-use crate::models::defaults::{default_bool, default_i64};
+use crate::defaults::{default_bool, default_i64};
 use crate::result::Result;
 
 #[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
@@ -46,17 +44,21 @@ pub struct UpdateTenant {
     pub name: Option<String>,
 }
 
-type Query = Select<tenants::table, AsSelect<Tenant, DB>>;
-type ById = Filter<Query, diesel::dsl::Eq<tenants::id, i32>>;
-type ByName = Filter<Query, diesel::dsl::Eq<tenants::name, String>>;
-
 impl Tenant {
     pub fn find(conn: &mut DbConnection, id: i32) -> Result<Option<Tenant>> {
-        Ok(Tenant::by_id(id).get_result(conn).optional()?)
+        Ok(tenants::table
+            .select(Tenant::as_select())
+            .filter(tenants::id.eq(id))
+            .get_result(conn)
+            .optional()?)
     }
 
     pub fn find_by_name(conn: &mut DbConnection, name: String) -> Result<Option<Tenant>> {
-        Ok(Tenant::by_name(name).get_result(conn).optional()?)
+        Ok(tenants::table
+            .select(Tenant::as_select())
+            .filter(tenants::name.eq(name))
+            .get_result(conn)
+            .optional()?)
     }
 
     pub fn create(conn: &mut DbConnection, tenant: CreateTenant) -> Result<Tenant> {
@@ -126,29 +128,5 @@ impl Tenant {
         }
 
         Ok(query.count().get_result(conn)?)
-    }
-
-    pub fn paginate(conn: &mut DbConnection, query: TenantQuery) -> Result<Paginated<Tenant>> {
-        let total = Tenant::count(conn, query.clone())?;
-        let data = Tenant::list(conn, query.clone())?;
-
-        Ok(Paginated {
-            total,
-            page: query.page,
-            per_page: query.page_size,
-            data,
-        })
-    }
-
-    fn query() -> Query {
-        tenants::table.select(Tenant::as_select())
-    }
-
-    fn by_id(id: i32) -> ById {
-        Tenant::query().filter(tenants::id.eq(id))
-    }
-
-    fn by_name(name: String) -> ByName {
-        Tenant::query().filter(tenants::name.eq(name))
     }
 }

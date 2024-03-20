@@ -56,9 +56,6 @@ fn parse_args() -> Result<AppSettings> {
 
     let mut config = ConfigBuilder::new(version.into(), serve_cmd.config);
 
-    if let Some(name) = serve_cmd.name {
-        config = config.set_name(name.to_string());
-    }
     if let Some(debug) = serve_cmd.debug {
         config = config.set_debug(debug);
     }
@@ -122,8 +119,6 @@ Daedalus application server
 pub struct Serve {
     #[clap(short, long)]
     pub config: Option<String>,
-    #[clap(short = 'n', long)]
-    pub name: Option<String>,
     #[clap(short = 'd', long)]
     pub debug: Option<bool>,
     #[clap(short = 'D', long)]

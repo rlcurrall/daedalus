@@ -1,32 +1,30 @@
 use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr, time::Duration};
 
+use clap::ValueEnum;
 use config::{Config as RustConfig, Environment, File};
 use serde::{Deserialize, Serialize, Serializer};
 use serde_with::{serde_as, DurationSeconds};
 
-use crate::models::defaults::{
-    default_bool, default_duration, default_u16, default_u32, default_usize,
-};
 use crate::result::{AppError, Result};
 
+// region: JWT settings
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct JwtSettings {
     /// The path to the public key used to verify JWT tokens.
-    #[serde(default = "default_jwt_pub_key")]
     pub pub_key: PathBuf,
 
     /// The path to the private key used to sign JWT tokens.
-    #[serde(default = "default_jwt_priv_key")]
     pub priv_key: PathBuf,
 
     /// Lifetime of the JWT token in seconds.
     /// The default is 3600 seconds.
     #[serde_as(as = "DurationSeconds<u64>")]
-    #[serde(default = "default_duration::<3600>")]
     pub lifetime: Duration,
 }
+// endregion
 
+// region: Database settings
 #[serde_as]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DatabaseSettings {
@@ -37,68 +35,139 @@ pub struct DatabaseSettings {
 
     /// The maximum number of connections allowed in the pool.
     /// The default is 10.
-    #[serde(default = "default_u32::<10>")]
     pub max_connections: u32,
 
     /// The maximum lifetime of a connection in the pool.
     /// The default is 600 seconds.
     #[serde_as(as = "DurationSeconds<u64>")]
-    #[serde(default = "default_duration::<600>")]
     pub idle_timeout: Duration,
 
     /// The maximum time to wait when acquiring a new connection.
     /// The default is 30 seconds.
     #[serde_as(as = "DurationSeconds<u64>")]
-    #[serde(default = "default_duration::<30>")]
     pub connection_timeout: Duration,
 
     /// The number of threads to use for the connection pool.
     /// The default is 3.
-    #[serde(default = "default_u32::<3>")]
     pub thread_pool_size: u32,
 }
+// endregion
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+// region: Log settings
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, ValueEnum, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Trace,
     Debug,
+    #[default]
     Info,
     Warn,
     Error,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+impl From<LogLevel> for tracing::Level {
+    fn from(value: LogLevel) -> Self {
+        match value {
+            LogLevel::Trace => tracing::Level::TRACE,
+            LogLevel::Debug => tracing::Level::DEBUG,
+            LogLevel::Info => tracing::Level::INFO,
+            LogLevel::Warn => tracing::Level::WARN,
+            LogLevel::Error => tracing::Level::ERROR,
+        }
+    }
+}
+
+impl FromStr for LogLevel {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<LogLevel, Self::Err> {
+        match s.to_lowercase() {
+            s if s == "trace" => Ok(LogLevel::Trace),
+            s if s == "debug" => Ok(LogLevel::Debug),
+            s if s == "info" => Ok(LogLevel::Info),
+            s if s == "warn" => Ok(LogLevel::Warn),
+            s if s == "error" => Ok(LogLevel::Error),
+            _ => Err(AppError::BadRequest {
+                cause: format!("{} is not a valid log level", s),
+            }),
+        }
+    }
+}
+
+impl Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            LogLevel::Trace => "trace",
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+            LogLevel::Warn => "warn",
+            LogLevel::Error => "error",
+        };
+
+        write!(f, "{}", value)
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, ValueEnum, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LogFormat {
+    #[default]
     Json,
     Pretty,
     Compact,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl FromStr for LogFormat {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<LogFormat, Self::Err> {
+        match s.to_lowercase() {
+            s if s == "json" => Ok(LogFormat::Json),
+            s if s == "pretty" => Ok(LogFormat::Pretty),
+            s if s == "compact" => Ok(LogFormat::Compact),
+            _ => Err(AppError::BadRequest {
+                cause: format!("{} is not a valid log format", s),
+            }),
+        }
+    }
+}
+
+impl Display for LogFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            LogFormat::Json => "json",
+            LogFormat::Pretty => "pretty",
+            LogFormat::Compact => "compact",
+        };
+
+        write!(f, "{}", value)
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct LogSettings {
     /// The level of the log.
     /// The default is "info".
-    #[serde(default = "default_log_level")]
     pub level: LogLevel,
 
     /// The format of the log.
     /// The default is "json".
-    #[serde(default = "default_log_format")]
     pub format: LogFormat,
 }
+// endregion
 
+// region: Server settings
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ServerSettings {
     /// The port to bind the server to.
     /// The default is 8080.
-    #[serde(default = "default_u16::<8080>")]
     pub port: u16,
 
     /// The number of worker threads to use.
     /// The default is 4.
-    #[serde(default = "default_usize::<4>")]
     pub workers: usize,
 }
+// endregion
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AppSettings {
@@ -106,28 +175,20 @@ pub struct AppSettings {
     /// This field is required.
     pub version: String,
 
-    /// The name of the application.
-    #[serde(default = "default_application_name")]
-    pub name: String,
-
     /// If the application is in debug mode.
     /// The default is false.
-    #[serde(default = "default_bool::<false>")]
     pub debug: bool,
 
     /// The settings for JWT.
-    #[serde(default)]
     pub jwt: JwtSettings,
 
     /// The settings for the database.
     pub database: DatabaseSettings,
 
     /// The settings for logging and tracing.
-    #[serde(default)]
     pub log: LogSettings,
 
     /// The settings for the server.
-    #[serde(default)]
     pub server: ServerSettings,
 }
 
@@ -155,11 +216,6 @@ impl ConfigBuilder {
     pub fn set_debug(mut self, debug: bool) -> Self {
         self.overrides
             .insert("debug".to_string(), debug.to_string());
-        self
-    }
-
-    pub fn set_name(mut self, name: String) -> Self {
-        self.overrides.insert("name".to_string(), name.to_string());
         self
     }
 
@@ -249,6 +305,18 @@ impl ConfigBuilder {
 
     pub fn parse(self) -> Result<AppSettings> {
         let mut builder = RustConfig::builder()
+            .set_default("debug", false)?
+            .set_default("jwt.pub_key", "./conf/public.pem")?
+            .set_default("jwt.priv_key", "./conf/private.pem")?
+            .set_default("jwt.lifetime", 3600)?
+            .set_default("database.max_connections", 10)?
+            .set_default("database.idle_timeout", 600)?
+            .set_default("database.connection_timeout", 30)?
+            .set_default("database.thread_pool_size", 3)?
+            .set_default("log.level", LogLevel::default().to_string())?
+            .set_default("log.format", LogFormat::default().to_string())?
+            .set_default("server.port", 8080)?
+            .set_default("server.workers", 4)?
             .add_source(
                 File::with_name(&self.config_file)
                     .required(false)
@@ -265,162 +333,18 @@ impl ConfigBuilder {
             builder = builder.set_override(&key, value)?;
         }
 
-        Ok(builder.build()?.try_deserialize()?)
+        Ok(builder
+            .build()
+            .map_err(|e| {
+                println!("Oops #1 Error: {:?}", e);
+                e
+            })?
+            .try_deserialize()
+            .map_err(|e| {
+                println!("Oops #2 Error: {:?}", e);
+                e
+            })?)
     }
-}
-
-impl Default for ServerSettings {
-    fn default() -> Self {
-        Self {
-            port: 8080,
-            workers: 4,
-        }
-    }
-}
-
-impl Default for LogSettings {
-    fn default() -> Self {
-        Self {
-            level: default_log_level(),
-            format: default_log_format(),
-        }
-    }
-}
-
-impl Default for JwtSettings {
-    fn default() -> Self {
-        Self {
-            pub_key: default_jwt_pub_key(),
-            priv_key: default_jwt_priv_key(),
-            lifetime: default_duration::<3600>(),
-        }
-    }
-}
-
-impl From<LogLevel> for tracing::Level {
-    fn from(value: LogLevel) -> Self {
-        match value {
-            LogLevel::Trace => tracing::Level::TRACE,
-            LogLevel::Debug => tracing::Level::DEBUG,
-            LogLevel::Info => tracing::Level::INFO,
-            LogLevel::Warn => tracing::Level::WARN,
-            LogLevel::Error => tracing::Level::ERROR,
-        }
-    }
-}
-
-impl FromStr for LogLevel {
-    type Err = AppError;
-
-    fn from_str(s: &str) -> std::result::Result<LogLevel, Self::Err> {
-        match s.to_lowercase() {
-            s if s == "trace" => Ok(LogLevel::Trace),
-            s if s == "debug" => Ok(LogLevel::Debug),
-            s if s == "info" => Ok(LogLevel::Info),
-            s if s == "warn" => Ok(LogLevel::Warn),
-            s if s == "error" => Ok(LogLevel::Error),
-            _ => Err(AppError::BadRequest {
-                cause: format!("{} is not a valid log level", s),
-            }),
-        }
-    }
-}
-
-impl Display for LogLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let value = match self {
-            LogLevel::Trace => "trace",
-            LogLevel::Debug => "debug",
-            LogLevel::Info => "info",
-            LogLevel::Warn => "warn",
-            LogLevel::Error => "error",
-        };
-
-        write!(f, "{}", value)
-    }
-}
-
-impl clap::ValueEnum for LogLevel {
-    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
-        Some(match self {
-            LogLevel::Error => clap::builder::PossibleValue::new("error"),
-            LogLevel::Warn => clap::builder::PossibleValue::new("warn"),
-            LogLevel::Info => clap::builder::PossibleValue::new("info"),
-            LogLevel::Debug => clap::builder::PossibleValue::new("debug"),
-            LogLevel::Trace => clap::builder::PossibleValue::new("trace"),
-        })
-    }
-
-    fn value_variants<'a>() -> &'a [Self] {
-        &[
-            LogLevel::Error,
-            LogLevel::Warn,
-            LogLevel::Info,
-            LogLevel::Debug,
-            LogLevel::Trace,
-        ]
-    }
-}
-
-impl FromStr for LogFormat {
-    type Err = AppError;
-
-    fn from_str(s: &str) -> std::result::Result<LogFormat, Self::Err> {
-        match s.to_lowercase() {
-            s if s == "json" => Ok(LogFormat::Json),
-            s if s == "pretty" => Ok(LogFormat::Pretty),
-            s if s == "compact" => Ok(LogFormat::Compact),
-            _ => Err(AppError::BadRequest {
-                cause: format!("{} is not a valid log format", s),
-            }),
-        }
-    }
-}
-
-impl Display for LogFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let value = match self {
-            LogFormat::Json => "json",
-            LogFormat::Pretty => "pretty",
-            LogFormat::Compact => "compact",
-        };
-
-        write!(f, "{}", value)
-    }
-}
-
-impl clap::ValueEnum for LogFormat {
-    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
-        Some(match self {
-            LogFormat::Json => clap::builder::PossibleValue::new("json"),
-            LogFormat::Pretty => clap::builder::PossibleValue::new("pretty"),
-            LogFormat::Compact => clap::builder::PossibleValue::new("compact"),
-        })
-    }
-
-    fn value_variants<'a>() -> &'a [Self] {
-        &[LogFormat::Json, LogFormat::Pretty, LogFormat::Compact]
-    }
-}
-
-fn default_application_name() -> String {
-    String::from("Server")
-}
-
-fn default_log_level() -> LogLevel {
-    LogLevel::Info
-}
-
-fn default_log_format() -> LogFormat {
-    LogFormat::Json
-}
-
-fn default_jwt_pub_key() -> PathBuf {
-    PathBuf::from("./conf/public.pem")
-}
-
-fn default_jwt_priv_key() -> PathBuf {
-    PathBuf::from("./conf/private.pem")
 }
 
 fn obfuscate_string<T, S>(_: T, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -428,8 +352,5 @@ where
     T: AsRef<[u8]>,
     S: Serializer,
 {
-    let mut obfuscated = String::new();
-    [0..10].iter().for_each(|_| obfuscated.push('*'));
-
-    serializer.serialize_str(&obfuscated)
+    serializer.serialize_str("**********")
 }

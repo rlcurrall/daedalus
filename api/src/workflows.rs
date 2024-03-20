@@ -11,16 +11,13 @@ use tsync::tsync;
 use uuid::Uuid;
 
 use crate::database::{schema::workflows, DbConnection, DB};
-use crate::models::common::Paginated;
-use crate::models::defaults::{default_bool, default_i32, default_i64};
+use crate::defaults::{default_bool, default_i64};
 use crate::result::AppError;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[tsync]
 pub struct WorkflowPosition {
-    #[serde(default = "default_i32::<0>")]
     pub x: i32,
-    #[serde(default = "default_i32::<0>")]
     pub y: i32,
 }
 
@@ -135,21 +132,6 @@ impl Workflow {
             .get_results(conn)?;
 
         Ok(res)
-    }
-
-    pub fn paginate(
-        conn: &mut DbConnection,
-        query: WorkflowQuery,
-    ) -> Result<Paginated<Workflow>, AppError> {
-        let total = Workflow::count(conn, query.clone())?;
-        let data = Workflow::list(conn, query.clone())?;
-
-        Ok(Paginated {
-            total,
-            page: query.page,
-            per_page: query.per_page,
-            data,
-        })
     }
 }
 

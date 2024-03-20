@@ -2,18 +2,27 @@ use actix_web::web::{block, Data, Json, Path, Query};
 
 use crate::database::PoolManager;
 use crate::middleware::bearer::UserClaims;
-use crate::models::common::Paginated;
 use crate::result::{AppError, JsonResult};
 use crate::workflows::{NewWorkflow, UpdateWorkflow, Workflow, WorkflowQuery};
+
+use super::Paginated;
 
 pub async fn list(
     _: UserClaims,
     Query(filter): Query<WorkflowQuery>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Paginated<Workflow>>> {
-    let workflows = block(move || {
+    let workflows = block(move || -> Result<_, AppError> {
         let mut conn = pool.get()?;
-        Workflow::paginate(&mut conn, filter.into())
+        let total = Workflow::count(&mut conn, filter.clone())?;
+        let data = Workflow::list(&mut conn, filter.clone())?;
+
+        Ok(Paginated {
+            total,
+            page: filter.page,
+            per_page: filter.per_page,
+            data,
+        })
     })
     .await??;
 

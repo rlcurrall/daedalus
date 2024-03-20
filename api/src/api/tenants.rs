@@ -2,18 +2,27 @@ use actix_web::web::{block, Data, Json, Path, Query};
 
 use crate::database::PoolManager;
 use crate::middleware::bearer::UserClaims;
-use crate::models::common::Paginated;
 use crate::result::{AppError, JsonResult};
 use crate::tenants::{CreateTenant, Tenant, TenantQuery, UpdateTenant};
+
+use super::Paginated;
 
 pub async fn list(
     _: UserClaims,
     Query(query): Query<TenantQuery>,
     pool: Data<PoolManager>,
 ) -> JsonResult<Json<Paginated<Tenant>>> {
-    let tenants = block(move || {
+    let tenants = block(move || -> Result<_, AppError> {
         let mut conn = pool.get()?;
-        Tenant::paginate(&mut conn, query.into())
+        let total = Tenant::count(&mut conn, query.clone())?;
+        let data = Tenant::list(&mut conn, query.clone())?;
+
+        Ok(Paginated {
+            total,
+            page: query.page,
+            per_page: query.page_size,
+            data,
+        })
     })
     .await??;
 

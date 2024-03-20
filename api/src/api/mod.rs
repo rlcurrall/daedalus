@@ -1,10 +1,21 @@
 use actix_web::web::{get, post, put, scope, ServiceConfig};
+use serde::{Deserialize, Serialize};
+use tsync::tsync;
 
 use crate::{config::AppSettings, middleware::bearer::JwtAuth};
 
 pub mod tenants;
 pub mod users;
 pub mod workflows;
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[tsync]
+pub struct Paginated<T> {
+    pub total: i64,
+    pub page: i64,
+    pub per_page: i64,
+    pub data: Vec<T>,
+}
 
 pub fn api_routes(
     settings: AppSettings,

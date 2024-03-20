@@ -1,17 +1,15 @@
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use diesel::helper_types::{AsSelect, Filter, Select};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use tsync::tsync;
 
 use crate::database::{schema::users, DbConnection, DB};
-use crate::models::common::Paginated;
-use crate::models::defaults::{default_bool, default_i64};
+use crate::defaults::{default_bool, default_i64};
 use crate::result::AppError;
 
-#[derive(Clone, Debug, Deserialize, Insertable, Serialize)]
 #[tsync]
+#[derive(Clone, Debug, Deserialize, Insertable, Serialize)]
 #[diesel(table_name = users)]
 pub struct CreateUser {
     pub tenant_id: i32,
@@ -19,16 +17,16 @@ pub struct CreateUser {
     pub password: String,
 }
 
-#[derive(AsChangeset, Clone, Debug, Deserialize, Serialize)]
 #[tsync]
+#[derive(AsChangeset, Clone, Debug, Deserialize, Serialize)]
 #[diesel(table_name = users)]
 pub struct UpdateUser {
     pub email: Option<String>,
     pub password: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
 #[tsync]
+#[derive(Clone, Debug, Deserialize, Queryable, Selectable, Serialize)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i64,
@@ -41,8 +39,8 @@ pub struct User {
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
 #[tsync]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UserQuery {
     pub tenant_id: Option<i32>,
     pub email: Option<String>,
@@ -54,6 +52,7 @@ pub struct UserQuery {
     pub page_size: i64,
 }
 
+#[tsync]
 #[derive(Serialize, Deserialize)]
 pub struct UserCredentials {
     pub tenant_id: i32,
@@ -61,16 +60,13 @@ pub struct UserCredentials {
     pub password: String,
 }
 
-type Query = Select<users::table, AsSelect<User, DB>>;
-type ById = Filter<Query, diesel::dsl::Eq<users::id, i64>>;
-type ByEmailAndTenantId = Filter<
-    Filter<Query, diesel::dsl::Eq<users::email, String>>,
-    diesel::dsl::Eq<users::tenant_id, i32>,
->;
-
 impl User {
     pub fn find(conn: &mut DbConnection, id: i64) -> Result<Option<User>, AppError> {
-        Ok(User::by_id(id).get_result(conn).optional()?)
+        Ok(users::table
+            .select(User::as_select())
+            .filter(users::id.eq(id))
+            .get_result(conn)
+            .optional()?)
     }
 
     pub fn find_by_email_and_tenant(
@@ -78,7 +74,10 @@ impl User {
         email: String,
         tenant_id: i32,
     ) -> Result<Option<User>, AppError> {
-        Ok(User::by_email_and_tenant(email, tenant_id)
+        Ok(users::table
+            .select(User::as_select())
+            .filter(users::email.eq(email))
+            .filter(users::tenant_id.eq(tenant_id))
             .get_result(conn)
             .optional()?)
     }
@@ -189,21 +188,6 @@ impl User {
         Ok(query.count().get_result(conn)?)
     }
 
-    pub fn paginate(
-        conn: &mut DbConnection,
-        filter: UserQuery,
-    ) -> Result<Paginated<User>, AppError> {
-        let total = User::count(conn, filter.clone())?;
-        let data = User::list(conn, filter.clone())?;
-
-        Ok(Paginated {
-            total,
-            page: filter.page,
-            per_page: filter.page_size,
-            data,
-        })
-    }
-
     pub fn authenticate(
         conn: &mut DbConnection,
         UserCredentials {
@@ -231,19 +215,5 @@ impl User {
                 cause: "Invalid email or password".to_string(),
             }),
         }
-    }
-
-    pub(crate) fn query() -> Query {
-        users::table.select(User::as_select())
-    }
-
-    pub(crate) fn by_id(id: i64) -> ById {
-        User::query().filter(users::id.eq(id))
-    }
-
-    pub(crate) fn by_email_and_tenant(email: String, tenant_id: i32) -> ByEmailAndTenantId {
-        User::query()
-            .filter(users::email.eq(email))
-            .filter(users::tenant_id.eq(tenant_id))
     }
 }
