@@ -8,6 +8,7 @@ import {
   ViewfinderCircleIcon,
   ChevronDoubleRightIcon,
   ChevronDoubleLeftIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/solid";
 import { useCallback, useState } from "react";
 import ReactFlow, {
@@ -186,13 +187,14 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
             <ArrowPathIcon />
           </button>
           <button
+            className="w-8 h-8 p-1"
             onClick={() =>
               console.log(
                 getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges)
               )
             }
           >
-            OUT
+            <ArrowDownTrayIcon />
           </button>
         </div>
       </div>
