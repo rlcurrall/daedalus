@@ -25,7 +25,8 @@ import { Select } from "@/components/general/select";
 export default function WorkflowState({
   data: state,
   selected,
-}: NodeProps<WorkflowState>) {
+}: NodeProps<WorkflowState & { dirty: boolean }>) {
+  const [showStateModal, setShowStateModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [selectedAction, setSelectedAction] = useState<
     WorkflowAction | undefined
@@ -34,10 +35,6 @@ export default function WorkflowState({
     "entry" | "exit" | undefined
   >(undefined);
 
-  useEffect(() => {
-    console.log({ selectedActionTiming });
-  }, [selectedActionTiming]);
-
   return (
     <>
       <Handle type="target" position={Position.Top} />
@@ -45,7 +42,8 @@ export default function WorkflowState({
       <div
         className={clsx(
           "relative bg-zinc-900 text-white border rounded-md border-zinc-500 pb-2",
-          selected && "ring-1 ring-blue-500"
+          selected && "ring-1 ring-blue-500",
+          state.dirty && "ring-1 ring-yellow-800"
         )}
       >
         <div
@@ -69,7 +67,12 @@ export default function WorkflowState({
             <BoltIcon className="w-6 h-6" />
             <span>Add Action</span>
           </Button>
-          <Button plain square className="flex p-2 gap-2 rounded-r">
+          <Button
+            plain
+            square
+            className="flex p-2 gap-2 rounded-r"
+            onClick={() => setShowStateModal(true)}
+          >
             <PencilSquareIcon className="w-6 h-6" />
             <span>Edit</span>
           </Button>
@@ -141,6 +144,7 @@ export default function WorkflowState({
         onAdd={(timing, action) => {
           if (timing === "entry") state.entry_actions.push(action);
           else state.exit_actions.push(action);
+          state.dirty = true;
           return { success: true };
         }}
         onUpdate={(timing, action) => {
@@ -152,18 +156,21 @@ export default function WorkflowState({
             return { success: false, errors: { general: "Action not found" } };
           original.name = action.name;
           original.definition = action.definition;
+          state.dirty = true;
           return { success: true };
         }}
         onRemove={(action) => {
           let index = state.entry_actions.findIndex((a) => a.id === action.id);
           if (index >= 0) {
             state.entry_actions.splice(index, 1);
+            state.dirty = true;
             return { success: true };
           }
 
           index = state.exit_actions.findIndex((a) => a.id === action.id);
           if (index >= 0) {
             state.exit_actions.splice(index, 1);
+            state.dirty = true;
             return { success: true };
           }
 
@@ -171,6 +178,17 @@ export default function WorkflowState({
             success: false,
             errors: { general: "Action not found" },
           };
+        }}
+      />
+      <EditStateModal
+        open={showStateModal}
+        onClose={() => setShowStateModal(false)}
+        state={state}
+        onChange={(name, description) => {
+          state.name = name;
+          state.description = description;
+          state.dirty = true;
+          setShowStateModal(false);
         }}
       />
     </>
@@ -279,9 +297,8 @@ function AddOrEditActionModal({
   };
 
   useEffect(() => {
-    if (timing === oldTiming) return;
     setTiming(oldTiming ?? "entry");
-  }, [oldTiming, timing, setTiming]);
+  }, [oldTiming]);
 
   useEffect(() => {
     setActionName(action?.name ?? "");
@@ -563,5 +580,57 @@ function NotifyFields({
         </Field>
       )}
     </>
+  );
+}
+
+function EditStateModal({
+  open,
+  onClose,
+  state,
+  onChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  state: WorkflowState;
+  onChange: (name: string, description: string | undefined) => void;
+}) {
+  const [name, setName] = useState(state.name);
+  const [description, setDescription] = useState(state.description);
+
+  return (
+    <Dialog size="xl" open={open} onClose={onClose}>
+      <DialogTitle>Edit State</DialogTitle>
+      <DialogDescription>
+        Edit the state&apos;s name and description.
+      </DialogDescription>
+      <DialogBody>
+        <Fieldset className="space-y-4">
+          <Field>
+            <Label>State Name</Label>
+            <Input
+              name="state_name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <Field>
+            <Label>Description</Label>
+            <Input
+              name="state_description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </Field>
+        </Fieldset>
+      </DialogBody>
+      <DialogActions>
+        <Button color="dark" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button color="blue" onClick={() => onChange(name, description)}>
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

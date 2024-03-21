@@ -5,8 +5,11 @@ import ElkConstructor, {
 import { useLayoutEffect, useRef } from "react";
 import { Edge, MarkerType, Node, NodeChange } from "reactflow";
 
-type StateNode = Node<WorkflowState, "state">;
-type TransitionNode = Node<WorkflowTransition, "transition">;
+type StateNode = Node<WorkflowState & { dirty: boolean }, "state">;
+type TransitionNode = Node<
+  WorkflowTransition & { dirty: boolean },
+  "transition"
+>;
 export type WorkflowNode = StateNode | TransitionNode;
 export type WorkflowEdgeData = {
   transition: WorkflowTransition;
@@ -70,7 +73,10 @@ export function getNodesFromWorkflow(workflow: Workflow): WorkflowNode[] {
         id: transition.id,
         type: "transition",
         position: { x, y },
-        data: transition,
+        data: {
+          ...transition,
+          dirty: false,
+        },
       } satisfies TransitionNode;
     });
 
@@ -81,7 +87,10 @@ export function getNodesFromWorkflow(workflow: Workflow): WorkflowNode[] {
         id: state.id,
         type: "state",
         position: { x, y },
-        data: state,
+        data: {
+          ...state,
+          dirty: false,
+        },
       },
     ];
   });
