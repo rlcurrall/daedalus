@@ -1,15 +1,5 @@
 "use client";
 
-import {
-  ArrowPathIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-  SparklesIcon,
-  ViewfinderCircleIcon,
-  ChevronDoubleRightIcon,
-  ChevronDoubleLeftIcon,
-  ArrowDownTrayIcon,
-} from "@heroicons/react/24/solid";
 import { useCallback, useState } from "react";
 import ReactFlow, {
   Background,
@@ -100,9 +90,9 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
           onClick={() => setClosed((o) => !o)}
         >
           {closed ? (
-            <ChevronDoubleRightIcon className="w-6 h-6" />
+            <i className="fas fa-bars text-2xl" />
           ) : (
-            <ChevronDoubleLeftIcon className="w-6 h-6" />
+            <i className="fas fa-times text-2xl" />
           )}
           {!closed && (
             <>
@@ -172,19 +162,19 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
       >
         <div>
           <button onClick={() => zoomIn()} className="w-8 h-8 p-1">
-            <MagnifyingGlassPlusIcon />
+            <i className="fas fa-search-plus" />
           </button>
           <button onClick={() => zoomOut()} className="w-8 h-8 p-1">
-            <MagnifyingGlassMinusIcon />
+            <i className="fas fa-search-minus" />
           </button>
           <button onClick={() => fitView()} className="w-8 h-8 p-1">
-            <ViewfinderCircleIcon />
+            <i className="fas fa-compress" />
           </button>
           <button onClick={() => onLayout()} className="w-8 h-8 p-1">
-            <SparklesIcon />
+            <i className="fas fa-magic" />
           </button>
           <button onClick={() => fetchWorkflow()} className="w-8 h-8 p-1">
-            <ArrowPathIcon />
+            <i className="fas fa-sync" />
           </button>
           <button
             className="w-8 h-8 p-1"
@@ -194,7 +184,7 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
               )
             }
           >
-            <ArrowDownTrayIcon />
+            <i className="fas fa-save" />
           </button>
         </div>
       </div>

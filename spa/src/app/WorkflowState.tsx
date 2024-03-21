@@ -1,7 +1,5 @@
 import clsx from "clsx";
 import { Handle, NodeProps, Position } from "reactflow";
-import { PencilSquareIcon } from "@heroicons/react/24/solid";
-import { BoltIcon } from "@heroicons/react/24/outline";
 import {
   Dialog,
   DialogActions,
@@ -64,7 +62,7 @@ export default function WorkflowState({
             }}
             className="flex p-2 gap-2 rounded-l"
           >
-            <BoltIcon className="w-6 h-6" />
+            <i className="fas fa-bolt" />
             <span>Add Action</span>
           </Button>
           <Button
@@ -73,7 +71,7 @@ export default function WorkflowState({
             className="flex p-2 gap-2 rounded-r"
             onClick={() => setShowStateModal(true)}
           >
-            <PencilSquareIcon className="w-6 h-6" />
+            <i className="fas fa-pencil-alt" />
             <span>Edit</span>
           </Button>
         </div>
@@ -102,7 +100,7 @@ export default function WorkflowState({
                   }}
                 >
                   {action.name}
-                  <PencilSquareIcon className="w-4 h-4" />
+                  <i className="fas fa-pencil-alt" />
                 </Button>
               ))}
             </div>
@@ -122,7 +120,7 @@ export default function WorkflowState({
                   }}
                 >
                   {action.name}
-                  <PencilSquareIcon className="w-4 h-4" />
+                  <i className="fas fa-pencil-alt" />
                 </Button>
               ))}
             </div>

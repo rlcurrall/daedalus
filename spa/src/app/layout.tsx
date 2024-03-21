@@ -16,6 +16,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark bg-zinc-800">
+      <head>
+        <script
+          src="https://kit.fontawesome.com/ff80b2ed10.js"
+          crossOrigin="anonymous"
+          async
+        ></script>
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   );
