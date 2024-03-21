@@ -1,5 +1,5 @@
-import { Button } from "@/components/general/button";
 import { Text } from "@/components/general/text";
+import ActionPanel from "@/components/workflow/ActionPanel";
 import clsx from "clsx";
 import { Handle, NodeProps, Position } from "reactflow";
 
@@ -17,13 +17,12 @@ export default function WorkflowTransition({
 
       <div
         className={clsx(
-          "relative text-white border rounded-full border-zinc-500 bg-zinc-800",
+          "relative rounded-full border border-zinc-500 bg-zinc-800 text-white",
           selected && "ring-1 ring-blue-500",
-          transition.dirty && "ring-1 ring-yellow-800"
+          transition.dirty && "ring-1 ring-yellow-800",
         )}
       >
         <ActionPanel
-          transition={transition}
           selected={selected}
           onAddAction={() => {
             /* noop */
@@ -35,7 +34,7 @@ export default function WorkflowTransition({
 
         <DetailsPanel transition={transition} selected={selected} />
 
-        <Text className="relative font-bold flex gap-2 items-center px-4 py-2">
+        <Text className="relative flex items-center gap-2 px-4 py-2 font-bold">
           <TransitionTypeIcon type={transition.definition.type} />
           {transition.name}
         </Text>
@@ -60,14 +59,14 @@ function DetailsPanel({
   return (
     <div
       className={clsx(
-        "absolute top-1/2 -right-10 w-60 min-h-40 transform -translate-y-[4.5rem] scale-100 bg-zinc-800 transition-all duration-500 rounded flex px-3 py-2 shadow-2xl drop-shadow-2xl",
+        "absolute -right-10 top-1/2 flex min-h-40 w-60 -translate-y-[4.5rem] scale-100 transform rounded bg-zinc-800 px-3 py-2 shadow-2xl drop-shadow-2xl transition-all duration-500",
         selected
           ? "translate-x-full opacity-100"
-          : "translate-x-0 opacity-0 scale-0"
+          : "translate-x-0 scale-0 opacity-0",
       )}
     >
-      <dl className="divide-y divide-white/10 w-full">
-        <div className="px-4 py-3 sm:grid grid-cols-3 gap-3 sm:px-0">
+      <dl className="w-full divide-y divide-white/10">
+        <div className="grid-cols-3 gap-3 px-4 py-3 sm:grid sm:px-0">
           <dt className="text-xs font-medium leading-3 text-white">
             <Text>Type</Text>
           </dt>
@@ -75,7 +74,7 @@ function DetailsPanel({
             <Text>{transition.definition.type}</Text>
           </dd>
         </div>
-        <div className="px-4 py-3 sm:grid grid-cols-2 gap-3 sm:px-0">
+        <div className="grid-cols-2 gap-3 px-4 py-3 sm:grid sm:px-0">
           <dt className="text-sm font-medium leading-6 text-white">
             <Text>Description</Text>
           </dt>
@@ -88,68 +87,33 @@ function DetailsPanel({
   );
 }
 
-function ActionPanel({
-  transition: _,
-  selected,
-  onAddAction,
-  onEdit,
-}: {
-  transition: WorkflowTransition;
-  selected: boolean;
-  onAddAction: () => void;
-  onEdit: () => void;
-}) {
-  return (
-    <div
-      className={clsx(
-        "absolute -top-4 left-1/2 -translate-x-1/2 w-max scale-100 bg-zinc-800 transition-all duration-500 transform rounded flex shadow-2xl drop-shadow-2xl",
-        selected
-          ? "-translate-y-full opacity-100"
-          : "translate-y-0 opacity-0 scale-50"
-      )}
-    >
-      <Button
-        plain
-        square
-        onClick={onAddAction}
-        className="flex p-2 gap-2 rounded-l"
-      >
-        <i className="fas fa-bolt" />
-        <span>Add Action</span>
-      </Button>
-      <Button
-        plain
-        square
-        className="flex p-2 gap-2 rounded-r"
-        onClick={onEdit}
-      >
-        <i className="fas fa-pencil-alt" />
-        <span>Edit</span>
-      </Button>
-    </div>
-  );
-}
-
 function TransitionTypeIcon({
   type,
 }: {
   type: WorkflowTransition["definition"]["type"];
 }) {
   if (type === "Manual")
-    return <i className="fas fa-arrows-split-up-and-left" />;
+    return <i aria-hidden className="fas fa-arrows-split-up-and-left" />;
   if (type === "Automatic")
     return (
       <span className="relative">
-        <i className="fas fa-bolt absolute text-[0.5rem] -right-[0.1rem] bottom-[0.1rem] text-amber-600" />
-        <i className="fas fa-arrows-split-up-and-left" />
+        <i
+          aria-hidden
+          className="fas fa-bolt absolute -right-[0.1rem] bottom-[0.1rem] text-[0.5rem] text-amber-600"
+        />
+        <i aria-hidden className="fas fa-arrows-split-up-and-left" />
       </span>
     );
   if (type === "Approval")
     return (
       <span className="relative">
-        <i className="fas fa-check absolute text-base -right-[0.25rem] -bottom-[0.1rem] text-emerald-600" />
-        <i className="fas fa-arrows-split-up-and-left" />
+        <i
+          aria-hidden
+          className="fas fa-check absolute -bottom-[0.1rem] -right-[0.25rem] text-base text-emerald-600"
+        />
+        <i aria-hidden className="fas fa-arrows-split-up-and-left" />
       </span>
     );
-  if (type === "VendorConfirmation") return <i className="fas fa-truck" />;
+  if (type === "VendorConfirmation")
+    return <i aria-hidden className="fas fa-truck" />;
 }

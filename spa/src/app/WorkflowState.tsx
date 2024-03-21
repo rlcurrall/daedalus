@@ -19,6 +19,7 @@ import {
   Label,
 } from "@/components/general/fieldset";
 import { Select } from "@/components/general/select";
+import ActionPanel from "@/components/workflow/ActionPanel";
 
 export default function WorkflowState({
   data: state,
@@ -39,44 +40,22 @@ export default function WorkflowState({
 
       <div
         className={clsx(
-          "relative bg-zinc-900 text-white border rounded-md border-zinc-500 pb-2",
+          "relative rounded-md border border-zinc-500 bg-zinc-900 pb-2 text-white",
           selected && "ring-1 ring-blue-500",
-          state.dirty && "ring-1 ring-yellow-800"
+          state.dirty && "ring-1 ring-yellow-800",
         )}
       >
-        <div
-          className={clsx(
-            "absolute -top-4 left-1/2 -translate-x-1/2 w-max scale-100 bg-zinc-800 transition-all duration-500 transform rounded flex",
-            selected
-              ? "-translate-y-full opacity-100"
-              : "translate-y-0 opacity-0"
-          )}
-        >
-          <Button
-            plain
-            square
-            onClick={() => {
-              setSelectedActionTiming(undefined);
-              setSelectedAction(undefined);
-              setShowActionModal(true);
-            }}
-            className="flex p-2 gap-2 rounded-l"
-          >
-            <i className="fas fa-bolt" />
-            <span>Add Action</span>
-          </Button>
-          <Button
-            plain
-            square
-            className="flex p-2 gap-2 rounded-r"
-            onClick={() => setShowStateModal(true)}
-          >
-            <i className="fas fa-pencil-alt" />
-            <span>Edit</span>
-          </Button>
-        </div>
+        <ActionPanel
+          selected={selected}
+          onAddAction={() => {
+            setSelectedActionTiming(undefined);
+            setSelectedAction(undefined);
+            setShowActionModal(true);
+          }}
+          onEdit={() => setShowStateModal(true)}
+        />
 
-        <Text className="relative font-bold rounded-t-md px-4 py-2 border-b border-zinc-500 bg-zinc-800">
+        <Text className="relative rounded-t-md border-b border-zinc-500 bg-zinc-800 px-4 py-2 font-bold">
           {state.name}
         </Text>
 
@@ -84,46 +63,28 @@ export default function WorkflowState({
           <Text className="px-4 py-2">{state.description}</Text>
         )}
 
-        <div className="px-4 py-2 min-h-16 min-w-48 flex gap-4">
+        <div className="flex min-h-16 min-w-48 gap-4 px-4 py-2">
           {state.entry_actions.length > 0 && (
-            <div className="flex flex-col grow gap-2">
-              <Text className="px-1">Entry Actions</Text>
-              {state.entry_actions.map((action) => (
-                <Button
-                  key={action.id}
-                  className="flex items-center justify-between"
-                  color="dark"
-                  onClick={() => {
-                    setSelectedActionTiming("entry");
-                    setSelectedAction(action);
-                    setShowActionModal(true);
-                  }}
-                >
-                  {action.name}
-                  <i className="fas fa-pencil-alt" />
-                </Button>
-              ))}
-            </div>
+            <ActionList
+              actions={state.entry_actions}
+              timing="entry"
+              onEdit={(action) => {
+                setSelectedActionTiming("entry");
+                setSelectedAction(action);
+                setShowActionModal(true);
+              }}
+            />
           )}
           {state.exit_actions.length > 0 && (
-            <div className="flex flex-col grow gap-2">
-              <Text className="px-1">Exit Actions</Text>
-              {state.exit_actions.map((action) => (
-                <Button
-                  key={action.id}
-                  className="flex items-center justify-between"
-                  color="dark"
-                  onClick={() => {
-                    setSelectedActionTiming("exit");
-                    setSelectedAction(action);
-                    setShowActionModal(true);
-                  }}
-                >
-                  {action.name}
-                  <i className="fas fa-pencil-alt" />
-                </Button>
-              ))}
-            </div>
+            <ActionList
+              actions={state.exit_actions}
+              timing="exit"
+              onEdit={(action) => {
+                setSelectedActionTiming("exit");
+                setSelectedAction(action);
+                setShowActionModal(true);
+              }}
+            />
           )}
         </div>
 
@@ -193,6 +154,35 @@ export default function WorkflowState({
   );
 }
 
+function ActionList({
+  actions,
+  timing,
+  onEdit,
+}: {
+  actions: WorkflowAction[];
+  timing: "entry" | "exit";
+  onEdit: (action: WorkflowAction) => void;
+}) {
+  return (
+    <div className="flex grow flex-col gap-2">
+      <Text className="px-1">
+        {timing === "entry" ? "Entry" : "Exit"} Actions
+      </Text>
+      {actions.map((action) => (
+        <Button
+          key={action.id}
+          className="flex items-center justify-between"
+          color="dark"
+          onClick={() => onEdit(action)}
+        >
+          {action.name}
+          <i aria-hidden className="fas fa-pencil-alt" />
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 type ActionChangeResult =
   | { success: true }
   | { success: false; errors: Record<string, string | undefined> };
@@ -216,18 +206,18 @@ function AddOrEditActionModal({
   onClose: () => void;
   onAdd: (
     timing: "entry" | "exit",
-    action: WorkflowAction
+    action: WorkflowAction,
   ) => ActionChangeResult;
   onUpdate: (
     timing: "entry" | "exit",
-    action: WorkflowAction
+    action: WorkflowAction,
   ) => ActionChangeResult;
   onRemove: (action: WorkflowAction) => ActionChangeResult;
 }) {
   const [timing, setTiming] = useState<"entry" | "exit">(oldTiming ?? "entry");
   const [name, setActionName] = useState(action?.name ?? "");
   const [type, setActionType] = useState<WorkflowActionType>(
-    action?.definition.type ?? "AutoAssign"
+    action?.definition.type ?? "AutoAssign",
   );
   const [template_id, setTemplateId] = useState<number | undefined>();
   const [user_id, setUserId] = useState<number | undefined>();
@@ -304,17 +294,17 @@ function AddOrEditActionModal({
     setTemplateId(
       action?.definition && "template_id" in action?.definition
         ? action?.definition.template_id
-        : undefined
+        : undefined,
     );
     setUserId(
       action?.definition && "user_id" in action?.definition
         ? action?.definition.user_id
-        : undefined
+        : undefined,
     );
     setEmail(
       action?.definition && "email" in action?.definition
         ? action?.definition.email
-        : undefined
+        : undefined,
     );
     setErrors({});
   }, [action]);

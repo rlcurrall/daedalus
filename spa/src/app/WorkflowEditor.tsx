@@ -58,7 +58,7 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
         width: nodes.find((n2) => n2.id === n.id)?.width,
         height: nodes.find((n2) => n2.id === n.id)?.height,
         ...n,
-      }))
+      })),
     );
     setEdges(getEdgesFromWorkflow(workflow));
     globalThis.requestAnimationFrame(() => fitView());
@@ -83,16 +83,16 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
     >
       <div
         style={{ gridArea: "nav" }}
-        className={clsx("p-2 relative", closed ? "w-12" : "w-48")}
+        className={clsx("relative p-2", closed ? "w-12" : "w-48")}
       >
         <button
-          className="absolute bottom-0 right-0 left-0 flex items-center text-white justify-around p-2 ring-2 ring-inset ring-zinc-700"
+          className="absolute bottom-0 left-0 right-0 flex items-center justify-around p-2 ring-2 ring-inset ring-zinc-700 dark:text-white"
           onClick={() => setClosed((o) => !o)}
         >
           {closed ? (
-            <i className="fas fa-bars text-2xl" />
+            <i aria-hidden className="fas fa-bars text-2xl" />
           ) : (
-            <i className="fas fa-times text-2xl" />
+            <i aria-hidden className="fas fa-times text-2xl" />
           )}
           {!closed && (
             <>
@@ -139,8 +139,8 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
                     : undefined,
                   ...connection,
                 },
-                eds
-              )
+                eds,
+              ),
             );
           }}
           edgeTypes={edgeTypes}
@@ -158,33 +158,33 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
 
       <div
         style={{ gridArea: "controls", height: "2.5rem" }}
-        className="text-white flex justify-end items-center"
+        className="flex items-center justify-end text-white"
       >
         <div>
-          <button onClick={() => zoomIn()} className="w-8 h-8 p-1">
-            <i className="fas fa-search-plus" />
+          <button onClick={() => zoomIn()} className="h-8 w-8 p-1">
+            <i aria-hidden className="fas fa-search-plus" />
           </button>
-          <button onClick={() => zoomOut()} className="w-8 h-8 p-1">
-            <i className="fas fa-search-minus" />
+          <button onClick={() => zoomOut()} className="h-8 w-8 p-1">
+            <i aria-hidden className="fas fa-search-minus" />
           </button>
-          <button onClick={() => fitView()} className="w-8 h-8 p-1">
-            <i className="fas fa-compress" />
+          <button onClick={() => fitView()} className="h-8 w-8 p-1">
+            <i aria-hidden className="fas fa-compress" />
           </button>
-          <button onClick={() => onLayout()} className="w-8 h-8 p-1">
-            <i className="fas fa-magic" />
+          <button onClick={() => onLayout()} className="h-8 w-8 p-1">
+            <i aria-hidden className="fas fa-magic" />
           </button>
-          <button onClick={() => fetchWorkflow()} className="w-8 h-8 p-1">
-            <i className="fas fa-sync" />
+          <button onClick={() => fetchWorkflow()} className="h-8 w-8 p-1">
+            <i aria-hidden className="fas fa-sync" />
           </button>
           <button
-            className="w-8 h-8 p-1"
+            className="h-8 w-8 p-1"
             onClick={() =>
               console.log(
-                getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges)
+                getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges),
               )
             }
           >
-            <i className="fas fa-save" />
+            <i aria-hidden className="fas fa-save" />
           </button>
         </div>
       </div>
