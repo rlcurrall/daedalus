@@ -87,9 +87,14 @@ interface Workflow {
   name: string;
   description?: string;
   definition: WorkflowDefinition;
+  editor_metadata: WorkflowEditorMetadata;
   created_at: Date;
   updated_at: Date;
   deleted_at?: Date;
+}
+
+interface WorkflowEditorMetadata {
+  positions: Record<string, WorkflowPosition>;
 }
 
 interface WorkflowDefinition {
@@ -104,7 +109,6 @@ interface WorkflowState {
   entry_actions: Array<WorkflowAction>;
   exit_actions: Array<WorkflowAction>;
   transitions: Array<WorkflowTransition>;
-  position: WorkflowPosition;
 }
 
 interface WorkflowAction {
@@ -159,7 +163,6 @@ interface WorkflowTransition {
   name: string;
   description?: string;
   definition: TransitionDefinition;
-  position: WorkflowPosition;
 }
 
 type TransitionDefinition =

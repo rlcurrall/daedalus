@@ -18,7 +18,7 @@ export async function layoutElements(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[]
 ) {
-  const graph: ElkNode = {
+  const graph = {
     id: "root",
     layoutOptions: {
       "elk.algorithm": "mrtree",
@@ -33,7 +33,7 @@ export async function layoutElements(
           id: node.id,
           width: node.width ?? 200,
           height: node.height ?? 50,
-        } as ElkNode)
+        } satisfies ElkNode)
     ),
     edges: edges.map(
       (edge) =>
@@ -43,7 +43,7 @@ export async function layoutElements(
           targets: [edge.target],
         } satisfies ElkExtendedEdge)
     ),
-  };
+  } satisfies ElkNode;
 
   const elk = new ElkConstructor();
   const { children } = await elk.layout(graph);
@@ -64,23 +64,23 @@ export async function layoutElements(
 
 export function getNodesFromWorkflow(workflow: Workflow): WorkflowNode[] {
   return workflow.definition.states.flatMap((state) => {
-    const transitionNodes: TransitionNode[] = [];
+    const transitionNodes = state.transitions.map((transition) => {
+      const { x, y } = workflow.editor_metadata.positions[transition.id];
+      return {
+        id: transition.id,
+        type: "transition",
+        position: { x, y },
+        data: transition,
+      } satisfies TransitionNode;
+    });
 
-    for (const state of workflow.definition.states)
-      for (const transition of state.transitions)
-        transitionNodes.push({
-          id: transition.id,
-          type: "transition",
-          position: { x: transition.position.x, y: transition.position.y },
-          data: transition,
-        });
-
+    const { x, y } = workflow.editor_metadata.positions[state.id];
     return [
       ...transitionNodes,
       {
         id: state.id,
         type: "state",
-        position: { x: state.position.x, y: state.position.y },
+        position: { x, y },
         data: state,
       },
     ];
@@ -144,19 +144,20 @@ export function getEdgesFromWorkflow(workflow: Workflow) {
 export function getWorkflowFromNodesAndEdges(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[]
-) {
+): [WorkflowState[], Record<string, WorkflowPosition>] {
+  const positions: Record<string, WorkflowPosition> = {};
+
+  nodes.forEach((node) => {
+    positions[node.id] = {
+      x: node.position.x,
+      y: node.position.y,
+    };
+  });
+
   const states = nodes
-    .map((node) => {
-      node.data.position = node.position;
-      return node;
-    })
     .filter<StateNode>((node): node is StateNode => node.type === "state")
     .map((node) => node.data);
   const transitions = nodes
-    .map((node) => {
-      node.data.position = node.position;
-      return node;
-    })
     .filter<TransitionNode>(
       (node): node is TransitionNode => node.type === "transition"
     )
@@ -171,16 +172,31 @@ export function getWorkflowFromNodesAndEdges(
     });
   });
 
-  return states;
+  return [states, positions];
 }
 
-export async function getWorkflow(id: number) {
+export async function getWorkflow(_: number) {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   return {
     id: 69,
     tenant_id: 12,
     name: "New Workflow",
+    editor_metadata: {
+      positions: {
+        "018cdc83-8406-7eed-9139-6f2d57602053": { x: 259.5, y: 40 },
+        "018cdc88-0142-7f0d-908f-a4dc33960e27": { x: 280.5, y: 454 },
+        "018cdc8b-3817-7269-a644-31342c47985c": { x: -131.5, y: 803 },
+        "018cdc8b-1df8-75be-8f74-9b3386aa938c": { x: 637, y: 803 },
+        "018cdc91-8b61-76a6-988f-4f1657181cab": { x: 637.5, y: 1157 },
+        "74dc5e29-8a83-4b5a-8174-dc743f650c0d": { x: 296, y: 1511 },
+        "018cdc87-602a-7345-b9a0-de094ef68e8f": { x: 335, y: 320 },
+        "018cdc88-9ad8-74ee-999d-09177a0dbb3f": { x: 307.5, y: 661.5 },
+        "018cdc91-1d03-78da-8e33-4f80b0193888": { x: 634, y: 1015.5 },
+        "018cdcbf-6653-786d-b8c7-fd32d0581239": { x: 139.5, y: 1369.5 },
+        "91ffaf21-a635-4814-a310-15db102f805d": { x: 632, y: 1369.5 },
+      },
+    },
     definition: {
       initial_state: "018cdc83-8406-7eed-9139-6f2d57602053",
       states: [
@@ -225,16 +241,8 @@ export async function getWorkflow(id: number) {
                 type: "Automatic",
                 target_state_id: "018cdc88-0142-7f0d-908f-a4dc33960e27",
               },
-              position: {
-                x: 335,
-                y: 320,
-              },
             },
           ],
-          position: {
-            x: 259.5,
-            y: 40,
-          },
         },
         {
           id: "018cdc88-0142-7f0d-908f-a4dc33960e27",
@@ -273,16 +281,8 @@ export async function getWorkflow(id: number) {
                   },
                 ],
               },
-              position: {
-                x: 307.5,
-                y: 661.5,
-              },
             },
           ],
-          position: {
-            x: 280.5,
-            y: 454,
-          },
         },
         {
           id: "018cdc8b-3817-7269-a644-31342c47985c",
@@ -301,28 +301,16 @@ export async function getWorkflow(id: number) {
           ],
           exit_actions: [],
           transitions: [],
-          position: {
-            x: -131.5,
-            y: 803,
-          },
         },
         {
           id: "018cdc8b-1df8-75be-8f74-9b3386aa938c",
           name: "Inspection Scheduled",
           entry_actions: [],
           exit_actions: [],
-          position: {
-            x: 637,
-            y: 803,
-          },
           transitions: [
             {
               id: "018cdc91-1d03-78da-8e33-4f80b0193888",
               name: "Inspection Completed",
-              position: {
-                x: 634,
-                y: 1015.5,
-              },
               definition: {
                 type: "Manual",
                 options: [
@@ -345,18 +333,10 @@ export async function getWorkflow(id: number) {
           name: "Review",
           entry_actions: [],
           exit_actions: [],
-          position: {
-            x: 637.5,
-            y: 1157,
-          },
           transitions: [
             {
               id: "018cdcbf-6653-786d-b8c7-fd32d0581239",
               name: "Manager Approved",
-              position: {
-                x: 139.5,
-                y: 1369.5,
-              },
               definition: {
                 type: "Approval",
                 approver_id: 1,
@@ -377,10 +357,6 @@ export async function getWorkflow(id: number) {
             {
               id: "91ffaf21-a635-4814-a310-15db102f805d",
               name: "Homeowner Complaint",
-              position: {
-                x: 632,
-                y: 1369.5,
-              },
               definition: {
                 type: "Approval",
                 approver_id: 1,
@@ -403,10 +379,6 @@ export async function getWorkflow(id: number) {
         {
           id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
           name: "Failed",
-          position: {
-            x: 296,
-            y: 1511,
-          },
           entry_actions: [],
           exit_actions: [],
           transitions: [],

@@ -185,6 +185,15 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
           <button onClick={() => fetchWorkflow()} className="w-8 h-8 p-1">
             <ArrowPathIcon />
           </button>
+          <button
+            onClick={() =>
+              console.log(
+                getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges)
+              )
+            }
+          >
+            OUT
+          </button>
         </div>
       </div>
     </div>

@@ -26,13 +26,17 @@ export default function WorkflowState({
   data: state,
   selected,
 }: NodeProps<WorkflowState>) {
-  const [showActionAdd, setShowActionAdd] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
   const [selectedAction, setSelectedAction] = useState<
     WorkflowAction | undefined
   >(undefined);
   const [selectedActionTiming, setSelectedActionTiming] = useState<
     "entry" | "exit" | undefined
   >(undefined);
+
+  useEffect(() => {
+    console.log({ selectedActionTiming });
+  }, [selectedActionTiming]);
 
   return (
     <>
@@ -55,7 +59,11 @@ export default function WorkflowState({
           <Button
             plain
             square
-            onClick={() => setShowActionAdd(true)}
+            onClick={() => {
+              setSelectedActionTiming(undefined);
+              setSelectedAction(undefined);
+              setShowActionModal(true);
+            }}
             className="flex p-2 gap-2 rounded-l"
           >
             <BoltIcon className="w-6 h-6" />
@@ -85,9 +93,9 @@ export default function WorkflowState({
                   className="flex items-center justify-between"
                   color="dark"
                   onClick={() => {
-                    setSelectedAction(action);
                     setSelectedActionTiming("entry");
-                    setShowActionAdd(true);
+                    setSelectedAction(action);
+                    setShowActionModal(true);
                   }}
                 >
                   {action.name}
@@ -105,9 +113,9 @@ export default function WorkflowState({
                   className="flex items-center justify-between"
                   color="dark"
                   onClick={() => {
-                    setSelectedAction(action);
                     setSelectedActionTiming("exit");
-                    setShowActionAdd(true);
+                    setSelectedAction(action);
+                    setShowActionModal(true);
                   }}
                 >
                   {action.name}
@@ -124,9 +132,9 @@ export default function WorkflowState({
       <AddOrEditActionModal
         action={selectedAction}
         timing={selectedActionTiming}
-        open={showActionAdd}
+        open={showActionModal}
         onClose={() => {
-          setShowActionAdd(false);
+          setShowActionModal(false);
           setSelectedAction(undefined);
           setSelectedActionTiming(undefined);
         }}
@@ -271,7 +279,11 @@ function AddOrEditActionModal({
   };
 
   useEffect(() => {
-    setTiming(timing ?? "entry");
+    if (timing === oldTiming) return;
+    setTiming(oldTiming ?? "entry");
+  }, [oldTiming, timing, setTiming]);
+
+  useEffect(() => {
     setActionName(action?.name ?? "");
     setActionType(action?.definition.type ?? "AutoAssign");
     setTemplateId(
@@ -290,14 +302,14 @@ function AddOrEditActionModal({
         : undefined
     );
     setErrors({});
-  }, [action, timing, open]);
+  }, [action]);
 
   return (
     <Dialog size="xl" open={open} onClose={onClose}>
-      <DialogTitle>Add Action</DialogTitle>
+      <DialogTitle>{action ? "Update Action" : "Add Action"}</DialogTitle>
 
       <DialogDescription>
-        Add an action to the entry or exit of this state.
+        {action ? "Update" : "Add"} an action to the {timing} of this state.
       </DialogDescription>
 
       <DialogBody>

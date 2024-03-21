@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 
 use diesel::deserialize::{FromSql, FromSqlRow};
@@ -175,6 +176,13 @@ impl ToSql<Jsonb, DB> for WorkflowDefinition {
 pub struct WorkflowDefinition {
     pub initial_state: Uuid,
     pub states: Vec<WorkflowState>,
+    pub metadata: WorkflowMetadata,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[tsync]
+pub struct WorkflowMetadata {
+    pub positions: HashMap<Uuid, WorkflowPosition>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -186,7 +194,6 @@ pub struct WorkflowState {
     pub entry_actions: Vec<WorkflowAction>,
     pub exit_actions: Vec<WorkflowAction>,
     pub transitions: Vec<WorkflowTransition>,
-    pub position: WorkflowPosition,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -232,7 +239,6 @@ pub struct WorkflowTransition {
     pub name: String,
     pub description: Option<String>,
     pub definition: TransitionDefinition,
-    pub position: WorkflowPosition,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
