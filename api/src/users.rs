@@ -15,6 +15,7 @@ pub struct CreateUser {
     pub tenant_id: i32,
     pub email: String,
     pub password: String,
+    pub name: Option<String>,
 }
 
 #[tsync]
@@ -23,6 +24,7 @@ pub struct CreateUser {
 pub struct UpdateUser {
     pub email: Option<String>,
     pub password: Option<String>,
+    pub name: Option<String>,
 }
 
 #[tsync]
@@ -34,6 +36,7 @@ pub struct User {
     pub email: String,
     #[serde(skip_serializing)]
     pub password: String,
+    pub name: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -44,6 +47,7 @@ pub struct User {
 pub struct UserQuery {
     pub tenant_id: Option<i32>,
     pub email: Option<String>,
+    pub name: Option<String>,
     #[serde(default = "default_bool::<true>")]
     pub active: bool,
     #[serde(default = "default_i64::<1>")]
@@ -88,6 +92,7 @@ impl User {
             tenant_id,
             email,
             password,
+            name,
         }: CreateUser,
     ) -> Result<User, AppError> {
         let salt = SaltString::generate(&mut OsRng);
@@ -103,6 +108,7 @@ impl User {
                 tenant_id,
                 email,
                 password,
+                name,
             })
             .returning(User::as_returning())
             .get_result(conn)?)
@@ -111,7 +117,11 @@ impl User {
     pub fn update(
         conn: &mut DbConnection,
         id: i64,
-        UpdateUser { email, password }: UpdateUser,
+        UpdateUser {
+            email,
+            password,
+            name,
+        }: UpdateUser,
     ) -> Result<User, AppError> {
         let password = match password {
             None => None,
@@ -124,7 +134,11 @@ impl User {
 
         Ok(diesel::update(users::table)
             .filter(users::id.eq(id))
-            .set(&UpdateUser { email, password })
+            .set(&UpdateUser {
+                email,
+                password,
+                name,
+            })
             .returning(User::as_returning())
             .get_result(conn)?)
     }
@@ -134,6 +148,7 @@ impl User {
         UserQuery {
             tenant_id,
             email,
+            name,
             active,
             page,
             page_size,
@@ -147,6 +162,10 @@ impl User {
 
         if let Some(email) = email {
             query = query.filter(users::email.eq(email));
+        }
+
+        if let Some(name) = name {
+            query = query.filter(users::name.ilike(format!("%{name}%")));
         }
 
         query = match active {
@@ -166,6 +185,7 @@ impl User {
         UserQuery {
             tenant_id,
             email,
+            name,
             active,
             ..
         }: UserQuery,
@@ -178,6 +198,10 @@ impl User {
 
         if let Some(email) = email {
             query = query.filter(users::email.eq(email));
+        }
+
+        if let Some(name) = name {
+            query = query.filter(users::name.ilike(format!("%{name}%")));
         }
 
         query = match active {
