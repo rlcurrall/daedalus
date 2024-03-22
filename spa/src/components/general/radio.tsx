@@ -20,7 +20,7 @@ export function RadioGroup({ className, ...props }: HeadlessRadioGroupProps) {
         "space-y-3 [&_[data-slot=label]]:font-normal",
 
         // With descriptions
-        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
@@ -47,13 +47,13 @@ export function RadioField({ className, ...props }: HeadlessFieldProps) {
         "[&>[data-slot=description]]:col-start-2 [&>[data-slot=description]]:row-start-2",
 
         // With description
-        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
 }
 
-let base = [
+const base = [
   // Basic layout
   "relative isolate flex size-[1.1875rem] shrink-0 rounded-full sm:size-[1.0625rem]",
 
@@ -92,7 +92,7 @@ let base = [
   "dark:group-data-[disabled]:border-white/20 dark:group-data-[disabled]:bg-white/[2.5%] dark:group-data-[disabled]:[--radio-checked-indicator:theme(colors.white/50%)] dark:group-data-[disabled]:group-data-[checked]:after:hidden",
 ];
 
-let colors = {
+const colors = {
   "dark/zinc": [
     "[--radio-checked-bg:theme(colors.zinc.900)] [--radio-checked-border:theme(colors.zinc.950/90%)] [--radio-checked-indicator:theme(colors.white)]",
     "dark:[--radio-checked-bg:theme(colors.zinc.600)]",
@@ -152,7 +152,7 @@ export function Radio({
             "size-full rounded-full border-[4.5px] border-transparent bg-[--radio-indicator] bg-clip-padding",
 
             // Forced colors mode
-            "forced-colors:border-[Canvas] forced-colors:group-data-[checked]:border-[Highlight]"
+            "forced-colors:border-[Canvas] forced-colors:group-data-[checked]:border-[Highlight]",
           )}
         />
       </span>

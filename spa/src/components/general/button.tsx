@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import React from "react";
 import { Link } from "./link";
 
-let styles = {
+const styles = {
   base: [
     // Base
     "relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-base/6 font-semibold",
@@ -69,13 +69,13 @@ let styles = {
   ],
   plain: [
     // Base
-    "border-transparent text-zinc-950 data-[active]:bg-zinc-950/5 data-[active]:bg-zinc-950/5",
+    "border-transparent text-zinc-950 data-[active]:bg-zinc-950/5 data-[hover]:bg-zinc-950/5",
 
     // Dark mode
-    "data-[hover]:bg-zinc-950/5 dark:text-white dark:data-[active]:bg-white/10 dark:data-[active]:bg-white/10 dark:data-[hover]:bg-white/10",
+    "dark:text-white dark:data-[active]:bg-white/10 dark:data-[hover]:bg-white/10",
 
     // Icon
-    "[--btn-icon:theme(colors.zinc.500)] data-[active]:[--btn-icon:theme(colors.zinc.700)] data-[active]:[--btn-icon:theme(colors.zinc.700)] data-[hover]:[--btn-icon:theme(colors.zinc.700)] dark:[--btn-icon:theme(colors.zinc.500)] dark:data-[active]:[--btn-icon:theme(colors.zinc.400)] dark:data-[active]:[--btn-icon:theme(colors.zinc.400)] dark:data-[hover]:[--btn-icon:theme(colors.zinc.400)]",
+    "[--btn-icon:theme(colors.zinc.500)] data-[active]:[--btn-icon:theme(colors.zinc.700)] data-[hover]:[--btn-icon:theme(colors.zinc.700)] dark:[--btn-icon:theme(colors.zinc.500)] dark:data-[active]:[--btn-icon:theme(colors.zinc.400)] dark:data-[hover]:[--btn-icon:theme(colors.zinc.400)]",
   ],
   colors: {
     "dark/zinc": [
@@ -90,7 +90,7 @@ let styles = {
     ],
     "dark/white": [
       "text-white [--btn-bg:theme(colors.zinc.900)] [--btn-border:theme(colors.zinc.950/90%)] [--btn-hover-overlay:theme(colors.white/10%)]",
-      "dark:text-zinc-950 dark:[--btn-bg:white] dark:[--btn-hover-overlay:theme(colors.zinc.950/2.5%)] dark:[--btn-hover-overlay:theme(colors.zinc.950/5%)]",
+      "dark:text-zinc-950 dark:[--btn-bg:white] dark:[--btn-hover-overlay:theme(colors.zinc.950/5%)]",
       "[--btn-icon:theme(colors.zinc.400)] data-[active]:[--btn-icon:theme(colors.zinc.300)] data-[hover]:[--btn-icon:theme(colors.zinc.300)] dark:[--btn-icon:theme(colors.zinc.500)] dark:data-[active]:[--btn-icon:theme(colors.zinc.400)] dark:data-[hover]:[--btn-icon:theme(colors.zinc.400)]",
     ],
     dark: [
@@ -183,22 +183,14 @@ type ButtonProps = (
   | { color?: keyof typeof styles.colors; outline?: never; plain?: never }
   | { color?: never; outline: true; plain?: never }
   | { color?: never; outline?: never; plain: true }
-) & { children: React.ReactNode; square?: boolean } & (
+) & { children: React.ReactNode } & (
     | HeadlessButtonProps
     | React.ComponentPropsWithoutRef<typeof Link>
   );
 
 export const Button = React.forwardRef(function Button(
-  {
-    color,
-    outline,
-    plain,
-    className,
-    children,
-    square = false,
-    ...props
-  }: ButtonProps,
-  ref: React.ForwardedRef<HTMLElement>
+  { color, outline, plain, className, children, ...props }: ButtonProps,
+  ref: React.ForwardedRef<HTMLElement>,
 ) {
   let classes = clsx(
     className,
@@ -206,9 +198,8 @@ export const Button = React.forwardRef(function Button(
     outline
       ? styles.outline
       : plain
-      ? styles.plain
-      : clsx(styles.solid, styles.colors[color ?? "dark/zinc"]),
-    square && "rounded-none"
+        ? styles.plain
+        : clsx(styles.solid, styles.colors[color ?? "dark/zinc"]),
   );
 
   return "href" in props ? (

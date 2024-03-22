@@ -6,7 +6,6 @@ import clsx from "clsx";
 import React from "react";
 import { TouchTarget } from "./button";
 import { Link } from "./link";
-import Image from "next/image";
 
 type AvatarProps = {
   src?: string | null;
@@ -34,7 +33,9 @@ export function Avatar({
         "inline-grid align-middle *:col-start-1 *:row-start-1",
 
         // Add the correct border radius
-        square ? "rounded-[20%] *:rounded-[20%]" : "rounded-full *:rounded-full"
+        square
+          ? "rounded-[20%] *:rounded-[20%]"
+          : "rounded-full *:rounded-full",
       )}
       {...props}
     >
@@ -57,7 +58,7 @@ export function Avatar({
           </text>
         </svg>
       )}
-      {src && <Image src={src} alt={alt} />}
+      {src && <img src={src} alt={alt} />}
       {/* Add an inset border that sits on top of the image */}
       <span
         className="ring-1 ring-inset ring-black/5 dark:ring-white/5 forced-colors:outline"
@@ -77,12 +78,12 @@ export const AvatarButton = React.forwardRef(function AvatarButton(
     ...props
   }: AvatarProps &
     (HeadlessButtonProps | React.ComponentPropsWithoutRef<typeof Link>),
-  ref: React.ForwardedRef<HTMLElement>
+  ref: React.ForwardedRef<HTMLElement>,
 ) {
   let classes = clsx(
     className,
     square ? "rounded-lg" : "rounded-full",
-    "relative focus:outline-none data-[focus]:outline data-[focus]:outline-2 data-[focus]:outline-offset-2 data-[focus]:outline-blue-500"
+    "relative focus:outline-none data-[focus]:outline data-[focus]:outline-2 data-[focus]:outline-offset-2 data-[focus]:outline-blue-500",
   );
 
   return "href" in props ? (

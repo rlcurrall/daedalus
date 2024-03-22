@@ -22,7 +22,7 @@ export function SwitchGroup({
         "space-y-3 [&_[data-slot=label]]:font-normal",
 
         // With descriptions
-        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
@@ -49,15 +49,15 @@ export function SwitchField({ className, ...props }: HeadlessFieldProps) {
         "[&>[data-slot=description]]:col-start-1 [&>[data-slot=description]]:row-start-2",
 
         // With description
-        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
 }
 
-let colors = {
+const colors = {
   "dark/zinc": [
-    "[--switch-bg-ring:theme(colors.zinc.950/90%)] [--switch-bg:theme(colors.zinc.900)] dark:[--switch-bg-ring:theme(colors.zinc.700/90%)] dark:[--switch-bg-ring:transparent] dark:[--switch-bg:theme(colors.white/25%)]",
+    "[--switch-bg-ring:theme(colors.zinc.950/90%)] [--switch-bg:theme(colors.zinc.900)] dark:[--switch-bg-ring:transparent] dark:[--switch-bg:theme(colors.white/25%)]",
     "[--switch-ring:theme(colors.zinc.950/90%)] [--switch-shadow:theme(colors.black/10%)] [--switch:white] dark:[--switch-ring:theme(colors.zinc.700/90%)]",
   ],
   "dark/white": [
@@ -191,7 +191,7 @@ export function Switch({
         "dark:data-[disabled]:bg-white/15 dark:data-[disabled]:data-[checked]:bg-white/15 dark:data-[disabled]:data-[checked]:ring-white/15",
 
         // Color specific styles
-        colors[color]
+        colors[color],
       )}
       {...props}
     >
@@ -215,7 +215,7 @@ export function Switch({
           "group-data-[checked]:translate-x-4 sm:group-data-[checked]:translate-x-3",
 
           // Disabled
-          "group-data-[disabled]:group-data-[checked]:bg-white group-data-[disabled]:group-data-[checked]:shadow group-data-[disabled]:group-data-[checked]:ring-black/5"
+          "group-data-[disabled]:group-data-[checked]:bg-white group-data-[disabled]:group-data-[checked]:shadow group-data-[disabled]:group-data-[checked]:ring-black/5",
         )}
       />
     </HeadlessSwitch>

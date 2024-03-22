@@ -22,7 +22,7 @@ export function CheckboxGroup({
         "space-y-3",
 
         // With descriptions
-        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "has-[[data-slot=description]]:space-y-6 [&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
@@ -49,13 +49,13 @@ export function CheckboxField({ className, ...props }: HeadlessFieldProps) {
         "[&>[data-slot=description]]:col-start-2 [&>[data-slot=description]]:row-start-2",
 
         // With description
-        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium"
+        "[&_[data-slot=label]]:has-[[data-slot=description]]:font-medium",
       )}
     />
   );
 }
 
-let base = [
+const base = [
   // Basic layout
   "relative isolate flex size-[1.125rem] items-center justify-center rounded-[0.3125rem] sm:size-4",
 
@@ -92,7 +92,7 @@ let base = [
   "dark:forced-colors:[--checkbox-check:HighlightText] dark:forced-colors:[--checkbox-checked-bg:Highlight] dark:forced-colors:group-data-[disabled]:[--checkbox-check:Highlight]",
 ];
 
-let colors = {
+const colors = {
   "dark/zinc": [
     "[--checkbox-check:theme(colors.white)] [--checkbox-checked-bg:theme(colors.zinc.900)] [--checkbox-checked-border:theme(colors.zinc.950/90%)]",
     "dark:[--checkbox-checked-bg:theme(colors.zinc.600)]",

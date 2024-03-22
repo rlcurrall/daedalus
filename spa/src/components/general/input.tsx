@@ -3,24 +3,25 @@ import {
   type InputProps as HeadlessInputProps,
 } from "@headlessui/react";
 import { clsx } from "clsx";
+import { forwardRef } from "react";
 
 const dateTypes = ["date", "datetime-local", "month", "time", "week"];
 type DateType = (typeof dateTypes)[number];
 
-export function Input({
-  className,
-  ...props
-}: {
-  type?:
-    | "email"
-    | "number"
-    | "password"
-    | "search"
-    | "tel"
-    | "text"
-    | "url"
-    | DateType;
-} & HeadlessInputProps) {
+export const Input = forwardRef<
+  HTMLInputElement,
+  {
+    type?:
+      | "email"
+      | "number"
+      | "password"
+      | "search"
+      | "tel"
+      | "text"
+      | "url"
+      | DateType;
+  } & HeadlessInputProps
+>(function Input({ className, ...props }, ref) {
   return (
     <span
       data-slot="control"
@@ -47,6 +48,7 @@ export function Input({
       ])}
     >
       <HeadlessInput
+        ref={ref}
         className={clsx([
           // Date classes
           props.type &&
@@ -69,7 +71,7 @@ export function Input({
           "relative block w-full appearance-none rounded-lg px-[calc(theme(spacing[3.5])-1px)] py-[calc(theme(spacing[2.5])-1px)] sm:px-[calc(theme(spacing[3])-1px)] sm:py-[calc(theme(spacing[1.5])-1px)]",
 
           // Typography
-          "text-base/6 text-zinc-950 placeholder:text-zinc-500 sm:text-sm/6 dark:text-white",
+          "text-base/6 text-zinc-950 placeholder:text-zinc-500 dark:text-white sm:text-sm/6",
 
           // Border
           "border border-zinc-950/10 data-[hover]:border-zinc-950/20 dark:border-white/10 dark:data-[hover]:border-white/20",
@@ -90,4 +92,4 @@ export function Input({
       />
     </span>
   );
-}
+});
