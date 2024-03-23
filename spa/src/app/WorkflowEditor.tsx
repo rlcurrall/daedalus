@@ -12,6 +12,8 @@ import ReactFlow, {
   useNodesState,
   useReactFlow,
 } from "reactflow";
+import WorkflowState from "./WorkflowState";
+import WorkflowTransition from "./WorkflowTransition";
 import {
   WorkflowNode,
   getEdgesFromWorkflow,
@@ -21,9 +23,6 @@ import {
   layoutElements,
   useLayoutEffectOnce,
 } from "./utils";
-import WorkflowState from "./WorkflowState";
-import WorkflowTransition from "./WorkflowTransition";
-import clsx from "clsx";
 
 const edgeTypes = {};
 const nodeTypes = {
@@ -67,99 +66,54 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
   useLayoutEffectOnce(fetchWorkflow);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateRows: "1fr auto",
-        gridTemplateColumns: "auto 1fr",
-        height: "100vh",
-        width: "100vw",
-        margin: 0,
-        gridTemplateAreas: `
-          "nav graph"
-          "nav controls"
-        `,
-      }}
-    >
-      <div
-        style={{ gridArea: "nav" }}
-        className={clsx("relative p-2", closed ? "w-12" : "w-48")}
-      >
-        <button
-          className="absolute bottom-0 left-0 right-0 flex items-center justify-around p-2 ring-2 ring-inset ring-zinc-700 dark:text-white"
-          onClick={() => setClosed((o) => !o)}
-        >
-          {closed ? (
-            <i aria-hidden className="fas fa-bars text-2xl" />
-          ) : (
-            <i aria-hidden className="fas fa-times text-2xl" />
-          )}
-          {!closed && (
-            <>
-              Sidebar
-              <span className="w-6" />
-            </>
-          )}
-        </button>
-      </div>
+    <div className="flex h-screen w-screen flex-col ">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={(connection: Connection) => {
+          const source = nodes.find((n) => n.id === connection.source);
+          const target = nodes.find((n) => n.id === connection.target);
 
-      <div
-        style={{
-          gridArea: "graph",
-          backgroundColor: "#fff",
+          // The source and target must be valid and of different types
+          if (
+            !source ||
+            !target ||
+            (source.type === "transition" && target.type === "transition") ||
+            (source.type === "state" && target.type === "state")
+          )
+            return;
+
+          const targetIsState = target.type === "state";
+
+          setEdges((eds) =>
+            addEdge(
+              {
+                type: "smoothstep",
+                style: { strokeWidth: 2 },
+                markerEnd: targetIsState
+                  ? { type: MarkerType.ArrowClosed }
+                  : undefined,
+                ...connection,
+              },
+              eds,
+            ),
+          );
         }}
+        edgeTypes={edgeTypes}
+        nodeTypes={nodeTypes}
+        fitView
       >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={(connection: Connection) => {
-            const source = nodes.find((n) => n.id === connection.source);
-            const target = nodes.find((n) => n.id === connection.target);
+        <Background
+          color="#21222c"
+          className="bg-[#15151d]"
+          gap={32}
+          variant={BackgroundVariant.Lines}
+        />
+      </ReactFlow>
 
-            // The source and target must be valid and of different types
-            if (
-              !source ||
-              !target ||
-              (source.type === "transition" && target.type === "transition") ||
-              (source.type === "state" && target.type === "state")
-            )
-              return;
-
-            const targetIsState = target.type === "state";
-
-            setEdges((eds) =>
-              addEdge(
-                {
-                  type: "smoothstep",
-                  style: { strokeWidth: 2 },
-                  markerEnd: targetIsState
-                    ? { type: MarkerType.ArrowClosed }
-                    : undefined,
-                  ...connection,
-                },
-                eds,
-              ),
-            );
-          }}
-          edgeTypes={edgeTypes}
-          nodeTypes={nodeTypes}
-          fitView
-        >
-          <Background
-            color="#21222c"
-            className="bg-[#15151d]"
-            gap={32}
-            variant={BackgroundVariant.Lines}
-          />
-        </ReactFlow>
-      </div>
-
-      <div
-        style={{ gridArea: "controls", height: "2.5rem" }}
-        className="flex items-center justify-end text-white"
-      >
+      <div className="flex items-center justify-end bg-zinc-900 text-white">
         <div>
           <button onClick={() => zoomIn()} className="h-8 w-8 p-1">
             <i aria-hidden className="fas fa-search-plus" />

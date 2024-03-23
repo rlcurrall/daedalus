@@ -5,8 +5,8 @@ import ElkConstructor, {
 import { useLayoutEffect, useRef } from "react";
 import { Edge, MarkerType, Node, NodeChange } from "reactflow";
 
-type StateNode = Node<WorkflowState & { dirty: boolean }, "state">;
-type TransitionNode = Node<
+export type StateNode = Node<WorkflowState & { dirty: boolean }, "state">;
+export type TransitionNode = Node<
   WorkflowTransition & { dirty: boolean },
   "transition"
 >;
@@ -19,7 +19,7 @@ export type WorkflowEdge = Edge<WorkflowEdgeData>;
 
 export async function layoutElements(
   nodes: WorkflowNode[],
-  edges: WorkflowEdge[]
+  edges: WorkflowEdge[],
 ) {
   const graph = {
     id: "root",
@@ -36,7 +36,7 @@ export async function layoutElements(
           id: node.id,
           width: node.width ?? 200,
           height: node.height ?? 50,
-        } satisfies ElkNode)
+        }) satisfies ElkNode,
     ),
     edges: edges.map(
       (edge) =>
@@ -44,7 +44,7 @@ export async function layoutElements(
           id: edge.id,
           sources: [edge.source],
           targets: [edge.target],
-        } satisfies ElkExtendedEdge)
+        }) satisfies ElkExtendedEdge,
     ),
   } satisfies ElkNode;
 
@@ -60,7 +60,7 @@ export async function layoutElements(
           position: { x, y },
           positionAbsolute: { x, y },
           dragging: false,
-        } satisfies NodeChange)
+        }) satisfies NodeChange,
     ) ?? []
   );
 }
@@ -125,6 +125,35 @@ export function getEdgesFromWorkflow(workflow: Workflow) {
             data: { transition, option },
           });
         }
+      } else if (transition.definition.type === "Approval") {
+        edges.push({
+          id: `trn-${state.id}-to-${transition.id}`,
+          source: state.id,
+          target: transition.id,
+          type: "smoothstep",
+          style: { strokeWidth: 2 },
+          data: { transition },
+        });
+        edges.push({
+          id: `trn-${transition.id}-to-${transition.definition.approval_option.target_state_id}`,
+          source: transition.id,
+          target: transition.definition.approval_option.target_state_id,
+          type: "smoothstep",
+          label: "Approved",
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { strokeWidth: 2 },
+          data: { transition, option: transition.definition.approval_option },
+        });
+        edges.push({
+          id: `trn-${transition.id}-to-${transition.definition.rejection_option.target_state_id}`,
+          source: transition.id,
+          target: transition.definition.rejection_option.target_state_id,
+          type: "smoothstep",
+          label: "Denied",
+          markerEnd: { type: MarkerType.ArrowClosed },
+          style: { strokeWidth: 2 },
+          data: { transition, option: transition.definition.rejection_option },
+        });
       } else {
         edges.push({
           id: `trn-${state.id}-to-${transition.id}`,
@@ -152,7 +181,7 @@ export function getEdgesFromWorkflow(workflow: Workflow) {
 
 export function getWorkflowFromNodesAndEdges(
   nodes: WorkflowNode[],
-  edges: WorkflowEdge[]
+  edges: WorkflowEdge[],
 ): [WorkflowState[], Record<string, WorkflowPosition>] {
   const positions: Record<string, WorkflowPosition> = {};
 
@@ -168,14 +197,14 @@ export function getWorkflowFromNodesAndEdges(
     .map((node) => node.data);
   const transitions = nodes
     .filter<TransitionNode>(
-      (node): node is TransitionNode => node.type === "transition"
+      (node): node is TransitionNode => node.type === "transition",
     )
     .map((node) => node.data);
 
   states.forEach((state) => {
     state.transitions.forEach((transition, index) => {
       const updatedTransition = transitions.find(
-        (t) => t.id === transition.id
+        (t) => t.id === transition.id,
       )!;
       state.transitions[index] = updatedTransition;
     });
@@ -213,6 +242,7 @@ export async function getWorkflow(_: number) {
           id: "018cdc83-8406-7eed-9139-6f2d57602053",
           name: "Request Submitted",
           description: "The request has been submitted",
+          is_end_state: false,
           entry_actions: [
             {
               id: "91e59229-d9c0-4671-9c3f-98a0af79cfd8",
@@ -257,6 +287,7 @@ export async function getWorkflow(_: number) {
           id: "018cdc88-0142-7f0d-908f-a4dc33960e27",
           name: "Triage",
           description: "The request is being triaged",
+          is_end_state: false,
           entry_actions: [],
           exit_actions: [],
           transitions: [
@@ -267,24 +298,33 @@ export async function getWorkflow(_: number) {
                 type: "Manual",
                 options: [
                   {
+                    id: crypto.randomUUID(),
                     label: "Not Covered",
                     target_state_id: "018cdc8b-3817-7269-a644-31342c47985c",
+                    comment_required: true,
                     data: [
                       {
-                        type: "Comment",
+                        id: crypto.randomUUID(),
+                        type: "UserId",
+                        label: "Assign To",
                       },
                       {
+                        id: crypto.randomUUID(),
                         type: "Date",
                         label: "Inspection Date",
                       },
                     ],
                   },
                   {
+                    id: crypto.randomUUID(),
                     label: "Covered",
                     target_state_id: "018cdc8b-1df8-75be-8f74-9b3386aa938c",
+                    comment_required: false,
                     data: [
                       {
-                        type: "Comment",
+                        id: crypto.randomUUID(),
+                        type: "UserId",
+                        label: "Assign To",
                       },
                     ],
                   },
@@ -297,6 +337,7 @@ export async function getWorkflow(_: number) {
           id: "018cdc8b-3817-7269-a644-31342c47985c",
           name: "Closed",
           description: "The request is closed",
+          is_end_state: true,
           entry_actions: [
             {
               id: "018cdc8d-ac19-7d23-be7b-61d28d60a71d",
@@ -314,6 +355,7 @@ export async function getWorkflow(_: number) {
         {
           id: "018cdc8b-1df8-75be-8f74-9b3386aa938c",
           name: "Inspection Scheduled",
+          is_end_state: false,
           entry_actions: [],
           exit_actions: [],
           transitions: [
@@ -324,11 +366,15 @@ export async function getWorkflow(_: number) {
                 type: "Manual",
                 options: [
                   {
+                    id: crypto.randomUUID(),
                     label: "Inspection Completed",
                     target_state_id: "018cdc91-8b61-76a6-988f-4f1657181cab",
+                    comment_required: true,
                     data: [
                       {
-                        type: "Comment",
+                        id: crypto.randomUUID(),
+                        type: "Date",
+                        label: "Inspection Date",
                       },
                     ],
                   },
@@ -340,6 +386,7 @@ export async function getWorkflow(_: number) {
         {
           id: "018cdc91-8b61-76a6-988f-4f1657181cab",
           name: "Review",
+          is_end_state: false,
           entry_actions: [],
           exit_actions: [],
           transitions: [
@@ -349,18 +396,20 @@ export async function getWorkflow(_: number) {
               definition: {
                 type: "Approval",
                 approver_id: 1,
-                options: [
-                  {
-                    label: "Approved",
-                    target_state_id: "018cdc8b-3817-7269-a644-31342c47985c",
-                    data: [],
-                  },
-                  {
-                    label: "Denied",
-                    target_state_id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
-                    data: [],
-                  },
-                ],
+                approval_option: {
+                  id: crypto.randomUUID(),
+                  label: "Approved",
+                  target_state_id: "018cdc8b-3817-7269-a644-31342c47985c",
+                  comment_required: false,
+                  data: [],
+                },
+                rejection_option: {
+                  id: crypto.randomUUID(),
+                  label: "Denied",
+                  target_state_id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
+                  comment_required: true,
+                  data: [],
+                },
               },
             },
             {
@@ -369,18 +418,20 @@ export async function getWorkflow(_: number) {
               definition: {
                 type: "Approval",
                 approver_id: 1,
-                options: [
-                  {
-                    label: "Approved",
-                    target_state_id: "018cdc8b-3817-7269-a644-31342c47985c",
-                    data: [],
-                  },
-                  {
-                    label: "Denied",
-                    target_state_id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
-                    data: [],
-                  },
-                ],
+                approval_option: {
+                  id: crypto.randomUUID(),
+                  label: "Approved",
+                  target_state_id: "018cdc8b-3817-7269-a644-31342c47985c",
+                  comment_required: false,
+                  data: [],
+                },
+                rejection_option: {
+                  id: crypto.randomUUID(),
+                  label: "Denied",
+                  target_state_id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
+                  comment_required: true,
+                  data: [],
+                },
               },
             },
           ],
@@ -388,6 +439,7 @@ export async function getWorkflow(_: number) {
         {
           id: "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
           name: "Failed",
+          is_end_state: true,
           entry_actions: [],
           exit_actions: [],
           transitions: [],

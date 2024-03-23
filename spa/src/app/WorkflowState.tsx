@@ -1,16 +1,4 @@
-import clsx from "clsx";
-import { Handle, NodeProps, Position } from "reactflow";
-import {
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/general/dialog";
-import { Text } from "@/components/general/text";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/general/button";
-import { Input } from "@/components/general/input";
 import {
   ErrorMessage,
   Field,
@@ -18,8 +6,14 @@ import {
   Fieldset,
   Label,
 } from "@/components/general/fieldset";
+import { Input } from "@/components/general/input";
 import { Select } from "@/components/general/select";
-import ActionPanel from "@/components/workflow/ActionPanel";
+import { SlideOver } from "@/components/general/slide-over";
+import { Switch } from "@/components/general/switch";
+import { Strong, Text } from "@/components/general/text";
+import clsx from "clsx";
+import { useEffect, useState } from "react";
+import { Handle, NodeProps, Position } from "reactflow";
 
 export default function WorkflowState({
   data: state,
@@ -45,7 +39,7 @@ export default function WorkflowState({
           state.dirty && "ring-1 ring-yellow-800",
         )}
       >
-        <ActionPanel
+        <TopPanel
           selected={selected}
           onAddAction={() => {
             setSelectedActionTiming(undefined);
@@ -88,7 +82,9 @@ export default function WorkflowState({
           )}
         </div>
 
-        <Handle type="source" position={Position.Bottom} />
+        {!state.is_end_state && (
+          <Handle type="source" position={Position.Bottom} />
+        )}
       </div>
 
       <AddOrEditActionModal
@@ -143,14 +139,57 @@ export default function WorkflowState({
         open={showStateModal}
         onClose={() => setShowStateModal(false)}
         state={state}
-        onChange={(name, description) => {
+        onChange={(name, description, isEndState) => {
           state.name = name;
           state.description = description;
+          state.is_end_state = isEndState;
           state.dirty = true;
           setShowStateModal(false);
         }}
       />
     </>
+  );
+}
+
+function TopPanel({
+  selected,
+  onAddAction,
+  onEdit,
+}: {
+  selected: boolean;
+  onAddAction?: () => void;
+  onEdit?: () => void;
+}): JSX.Element {
+  return (
+    <div
+      className={clsx(
+        "absolute -top-4 left-1/2 flex w-max -translate-x-1/2 scale-100 transform gap-4 rounded transition-all duration-500",
+        selected
+          ? "-translate-y-full opacity-100"
+          : "translate-y-0 scale-50 opacity-0",
+      )}
+    >
+      {onAddAction && (
+        <Button
+          color="orange"
+          onClick={onAddAction}
+          className={clsx("flex gap-2 p-2")}
+        >
+          <i aria-hidden className="fas fa-bolt" />
+          <span>Add Action</span>
+        </Button>
+      )}
+      {onEdit && (
+        <Button
+          color="blue"
+          className={clsx("flex gap-2 p-2")}
+          onClick={onEdit}
+        >
+          <i aria-hidden className="fas fa-pencil-alt" />
+          <span>Edit</span>
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -310,14 +349,20 @@ function AddOrEditActionModal({
   }, [action]);
 
   return (
-    <Dialog size="xl" open={open} onClose={onClose}>
-      <DialogTitle>{action ? "Update Action" : "Add Action"}</DialogTitle>
+    <SlideOver open={open} onClose={onClose}>
+      <SlideOver.Title>
+        <Text>
+          <Strong className="text-xl">
+            {action ? "Update Action" : "Add Action"}
+          </Strong>
+        </Text>
+      </SlideOver.Title>
 
-      <DialogDescription>
-        {action ? "Update" : "Add"} an action to the {timing} of this state.
-      </DialogDescription>
+      <SlideOver.Panel className="flex h-full flex-col gap-4">
+        <Text>
+          {action ? "Update" : "Add"} an action to the {timing} of this state.
+        </Text>
 
-      <DialogBody>
         <Fieldset>
           {!!errors.general && <ErrorMessage>{errors.general}</ErrorMessage>}
 
@@ -394,58 +439,60 @@ function AddOrEditActionModal({
             }
           </FieldGroup>
         </Fieldset>
-      </DialogBody>
 
-      <DialogActions>
-        {!!action && (
-          <>
-            <Button
-              color="red"
-              onClick={() => {
-                if (!onRemove) return;
-                const result = onRemove(action);
-                if (result.success) handleClose();
-                else setErrors(result.errors);
-              }}
-            >
-              Remove
-            </Button>
-            <div className="grow" />
-          </>
-        )}
-        <Button color="dark" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          color="blue"
-          onClick={() => {
-            setErrors({});
-            const definitionResult = getDefinition();
-            if (!definitionResult.success) {
-              setErrors(definitionResult.errors);
-              return;
-            }
+        <div className="grow" />
 
-            const result = !action
-              ? onAdd(timing, {
-                  id: crypto.randomUUID(),
-                  name,
-                  definition: definitionResult.definition,
-                })
-              : onUpdate(timing, {
-                  id: action.id,
-                  name,
-                  definition: definitionResult.definition,
-                });
+        <div className="mt-4 flex gap-4">
+          {!!action && (
+            <>
+              <Button
+                color="red"
+                onClick={() => {
+                  if (!onRemove) return;
+                  const result = onRemove(action);
+                  if (result.success) handleClose();
+                  else setErrors(result.errors);
+                }}
+              >
+                Remove
+              </Button>
+            </>
+          )}
+          <div className="grow" />
+          <Button color="dark" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            color="blue"
+            onClick={() => {
+              setErrors({});
+              const definitionResult = getDefinition();
+              if (!definitionResult.success) {
+                setErrors(definitionResult.errors);
+                return;
+              }
 
-            if (result.success) handleClose();
-            else setErrors(result.errors);
-          }}
-        >
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
+              const result = !action
+                ? onAdd(timing, {
+                    id: crypto.randomUUID(),
+                    name,
+                    definition: definitionResult.definition,
+                  })
+                : onUpdate(timing, {
+                    id: action.id,
+                    name,
+                    definition: definitionResult.definition,
+                  });
+
+              if (result.success) handleClose();
+              else setErrors(result.errors);
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      </SlideOver.Panel>
+    </SlideOver>
   );
 }
 
@@ -580,18 +627,27 @@ function EditStateModal({
   open: boolean;
   onClose: () => void;
   state: WorkflowState;
-  onChange: (name: string, description: string | undefined) => void;
+  onChange: (
+    name: string,
+    description: string | undefined,
+    isEndState: boolean,
+  ) => void;
 }) {
   const [name, setName] = useState(state.name);
   const [description, setDescription] = useState(state.description);
+  const [isEndState, setIsEndState] = useState(state.is_end_state);
 
   return (
-    <Dialog size="xl" open={open} onClose={onClose}>
-      <DialogTitle>Edit State</DialogTitle>
-      <DialogDescription>
-        Edit the state&apos;s name and description.
-      </DialogDescription>
-      <DialogBody>
+    <SlideOver open={open} onClose={onClose}>
+      <SlideOver.Title>
+        <Text>
+          <Strong className="text-xl">Edit State</Strong>
+        </Text>
+      </SlideOver.Title>
+
+      <SlideOver.Panel className="flex h-full flex-col gap-4">
+        <Text>Edit the state&apos;s name and description.</Text>
+
         <Fieldset className="space-y-4">
           <Field>
             <Label>State Name</Label>
@@ -601,6 +657,7 @@ function EditStateModal({
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
+
           <Field>
             <Label>Description</Label>
             <Input
@@ -609,16 +666,32 @@ function EditStateModal({
               onChange={(e) => setDescription(e.target.value)}
             />
           </Field>
+
+          <Field className="space-x-4">
+            <Label>Is End State</Label>
+            <Switch
+              color="blue"
+              checked={isEndState}
+              onChange={(checked) => setIsEndState(checked)}
+            />
+          </Field>
         </Fieldset>
-      </DialogBody>
-      <DialogActions>
-        <Button color="dark" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button color="blue" onClick={() => onChange(name, description)}>
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
+
+        <div className="grow" />
+
+        <div className="flex gap-4">
+          <div className="grow" />
+          <Button color="dark" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            color="blue"
+            onClick={() => onChange(name, description, isEndState)}
+          >
+            Save
+          </Button>
+        </div>
+      </SlideOver.Panel>
+    </SlideOver>
   );
 }

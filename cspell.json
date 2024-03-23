@@ -27,6 +27,7 @@
     "stylesheet",
     "tailwindcss",
     "tsync",
-    "vite"
+    "vite",
+    "xmark"
   ]
 }

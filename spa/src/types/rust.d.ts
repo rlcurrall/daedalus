@@ -106,6 +106,7 @@ interface WorkflowState {
   id: string;
   name: string;
   description?: string;
+  is_end_state: boolean;
   entry_actions: Array<WorkflowAction>;
   exit_actions: Array<WorkflowAction>;
   transitions: Array<WorkflowTransition>;
@@ -178,7 +179,8 @@ type TransitionDefinition__Automatic = {
 type TransitionDefinition__Approval = {
   type: "Approval";
   approver_id: number;
-  options: Array<TransitionOption>;
+  approval_option: TransitionOption;
+  rejection_option: TransitionOption;
 };
 type TransitionDefinition__Manual = {
   type: "Manual";
@@ -190,24 +192,30 @@ type TransitionDefinition__VendorConfirmation = {
 };
 
 interface TransitionOption {
+  id: string;
   label: string;
   target_state_id: string;
+  comment_required: boolean;
   data: Array<TransitionOptionData>;
 }
 
 type TransitionOptionData =
-  | TransitionOptionData__Comment
   | TransitionOptionData__Date
+  | TransitionOptionData__UserId
   | TransitionOptionData__VendorId;
 
-type TransitionOptionData__Comment = {
-  type: "Comment";
-};
 type TransitionOptionData__Date = {
+  id: string;
   type: "Date";
   label: string;
 };
+type TransitionOptionData__UserId = {
+  id: string;
+  type: "UserId";
+  label: string;
+};
 type TransitionOptionData__VendorId = {
+  id: string;
   type: "VendorId";
   label: string;
 };

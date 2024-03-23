@@ -191,6 +191,7 @@ pub struct WorkflowState {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub is_end_state: bool,
     pub entry_actions: Vec<WorkflowAction>,
     pub exit_actions: Vec<WorkflowAction>,
     pub transitions: Vec<WorkflowTransition>,
@@ -250,7 +251,8 @@ pub enum TransitionDefinition {
     },
     Approval {
         approver_id: i64,
-        options: Vec<TransitionOption>,
+        approval_option: TransitionOption,
+        rejection_option: TransitionOption,
     },
     Manual {
         options: Vec<TransitionOption>,
@@ -263,8 +265,10 @@ pub enum TransitionDefinition {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[tsync]
 pub struct TransitionOption {
+    pub id: Uuid,
     pub label: String,
     pub target_state_id: Uuid,
+    pub comment_required: bool,
     pub data: Vec<TransitionOptionData>,
 }
 
@@ -272,7 +276,7 @@ pub struct TransitionOption {
 #[tsync]
 #[serde(tag = "type")]
 pub enum TransitionOptionData {
-    Comment,
-    Date { label: String },
-    VendorId { label: String },
+    Date { id: Uuid, label: String },
+    UserId { id: Uuid, label: String },
+    VendorId { id: Uuid, label: String },
 }
