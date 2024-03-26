@@ -1,0 +1,8 @@
+{
+  "workspaces": [
+    "spa"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace spa"
+  }
+}

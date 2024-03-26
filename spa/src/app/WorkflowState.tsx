@@ -14,13 +14,16 @@ import { Strong, Text } from "@/components/general/text";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { Handle, NodeProps, Position } from "reactflow";
+import { useEditorContext } from "./WorkflowEditor";
 
 export default function WorkflowState({
   data: state,
   selected,
 }: NodeProps<WorkflowState & { dirty: boolean }>) {
-  const [showStateModal, setShowStateModal] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(false);
+  const { nodes, setNodes } = useEditorContext();
+  const [modalState, setModalState] = useState<"state" | "action" | "closed">(
+    "closed",
+  );
   const [selectedAction, setSelectedAction] = useState<
     WorkflowAction | undefined
   >(undefined);
@@ -44,9 +47,12 @@ export default function WorkflowState({
           onAddAction={() => {
             setSelectedActionTiming(undefined);
             setSelectedAction(undefined);
-            setShowActionModal(true);
+            setModalState("action");
           }}
-          onEdit={() => setShowStateModal(true)}
+          onEdit={() => setModalState("state")}
+          onRemove={() => {
+            setNodes(nodes.filter((n) => n.id !== state.id));
+          }}
         />
 
         <Text className="relative rounded-t-md border-b border-zinc-500 bg-zinc-800 px-4 py-2 font-bold">
@@ -65,7 +71,7 @@ export default function WorkflowState({
               onEdit={(action) => {
                 setSelectedActionTiming("entry");
                 setSelectedAction(action);
-                setShowActionModal(true);
+                setModalState("action");
               }}
             />
           )}
@@ -76,7 +82,7 @@ export default function WorkflowState({
               onEdit={(action) => {
                 setSelectedActionTiming("exit");
                 setSelectedAction(action);
-                setShowActionModal(true);
+                setModalState("action");
               }}
             />
           )}
@@ -90,9 +96,9 @@ export default function WorkflowState({
       <AddOrEditActionModal
         action={selectedAction}
         timing={selectedActionTiming}
-        open={showActionModal}
+        open={modalState === "action"}
         onClose={() => {
-          setShowActionModal(false);
+          setModalState("closed");
           setSelectedAction(undefined);
           setSelectedActionTiming(undefined);
         }}
@@ -136,15 +142,15 @@ export default function WorkflowState({
         }}
       />
       <EditStateModal
-        open={showStateModal}
-        onClose={() => setShowStateModal(false)}
+        open={modalState === "state"}
+        onClose={() => setModalState("closed")}
         state={state}
         onChange={(name, description, isEndState) => {
           state.name = name;
           state.description = description;
           state.is_end_state = isEndState;
           state.dirty = true;
-          setShowStateModal(false);
+          setModalState("closed");
         }}
       />
     </>
@@ -155,10 +161,12 @@ function TopPanel({
   selected,
   onAddAction,
   onEdit,
+  onRemove,
 }: {
   selected: boolean;
-  onAddAction?: () => void;
-  onEdit?: () => void;
+  onAddAction(): void;
+  onEdit(): void;
+  onRemove(): void;
 }): JSX.Element {
   return (
     <div
@@ -169,26 +177,26 @@ function TopPanel({
           : "translate-y-0 scale-50 opacity-0",
       )}
     >
-      {onAddAction && (
-        <Button
-          color="orange"
-          onClick={onAddAction}
-          className={clsx("flex gap-2 p-2")}
-        >
-          <i aria-hidden className="fas fa-bolt" />
-          <span>Add Action</span>
-        </Button>
-      )}
-      {onEdit && (
-        <Button
-          color="blue"
-          className={clsx("flex gap-2 p-2")}
-          onClick={onEdit}
-        >
-          <i aria-hidden className="fas fa-pencil-alt" />
-          <span>Edit</span>
-        </Button>
-      )}
+      <Button
+        color="orange"
+        onClick={onAddAction}
+        className={clsx("flex gap-2 p-2")}
+      >
+        <i aria-hidden className="fas fa-bolt" />
+        <span>Add Action</span>
+      </Button>
+      <Button color="blue" className={clsx("flex gap-2 p-2")} onClick={onEdit}>
+        <i aria-hidden className="fas fa-pencil-alt" />
+        <span>Edit</span>
+      </Button>
+      <Button
+        color="rose"
+        className={clsx("flex gap-2 p-2")}
+        onClick={onRemove}
+      >
+        <i aria-hidden className="fas fa-trash-alt" />
+        <span>Remove</span>
+      </Button>
     </div>
   );
 }
@@ -200,7 +208,7 @@ function ActionList({
 }: {
   actions: WorkflowAction[];
   timing: "entry" | "exit";
-  onEdit: (action: WorkflowAction) => void;
+  onEdit(action: WorkflowAction): void;
 }) {
   return (
     <div className="flex grow flex-col gap-2">
@@ -242,16 +250,13 @@ function AddOrEditActionModal({
   timing?: "entry" | "exit";
   action?: WorkflowAction;
   open: boolean;
-  onClose: () => void;
-  onAdd: (
+  onClose(): void;
+  onAdd(timing: "entry" | "exit", action: WorkflowAction): ActionChangeResult;
+  onUpdate(
     timing: "entry" | "exit",
     action: WorkflowAction,
-  ) => ActionChangeResult;
-  onUpdate: (
-    timing: "entry" | "exit",
-    action: WorkflowAction,
-  ) => ActionChangeResult;
-  onRemove: (action: WorkflowAction) => ActionChangeResult;
+  ): ActionChangeResult;
+  onRemove(action: WorkflowAction): ActionChangeResult;
 }) {
   const [timing, setTiming] = useState<"entry" | "exit">(oldTiming ?? "entry");
   const [name, setActionName] = useState(action?.name ?? "");
@@ -502,8 +507,8 @@ function AssignToFields({
   errors,
 }: {
   userId: number | undefined;
-  setUserId: (id: number | undefined) => void;
   errors: Record<string, string | undefined>;
+  setUserId(id: number | undefined): void;
 }) {
   return (
     <Field>
@@ -528,8 +533,8 @@ function EmailFields({
   errors,
 }: {
   email: string | undefined;
-  setEmail: (email: string | undefined) => void;
   errors: Record<string, string | undefined>;
+  setEmail(email: string | undefined): void;
 }) {
   return (
     <Field>
@@ -556,11 +561,11 @@ function NotifyFields({
   errors,
 }: {
   templateId: number | undefined;
-  setTemplateId: (id: number | undefined) => void;
+  setTemplateId(id: number | undefined): void;
   targetType: NotifyTarget["type"];
-  setTargetType: (type: NotifyTarget["type"]) => void;
+  setTargetType(type: NotifyTarget["type"]): void;
   targetId: number | undefined;
-  setTargetId: (id: number | undefined) => void;
+  setTargetId(id: number | undefined): void;
   errors: Record<string, string | undefined>;
 }) {
   return (
@@ -625,13 +630,13 @@ function EditStateModal({
   onChange,
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose(): void;
   state: WorkflowState;
-  onChange: (
+  onChange(
     name: string,
     description: string | undefined,
     isEndState: boolean,
-  ) => void;
+  ): void;
 }) {
   const [name, setName] = useState(state.name);
   const [description, setDescription] = useState(state.description);

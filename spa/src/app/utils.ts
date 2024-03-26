@@ -96,23 +96,37 @@ export function getNodesFromWorkflow(workflow: Workflow): WorkflowNode[] {
   });
 }
 
+export const Ids = {
+  transitionOptionId(transitionId: string, optionId: string) {
+    return `${transitionId}->option-${optionId}`;
+  },
+  transitionApproveId(transitionId: string) {
+    return `${transitionId}->approve`;
+  },
+  transitionRejectId(transitionId: string) {
+    return `${transitionId}->reject`;
+  },
+  transitionTargetId(transitionId: string) {
+    return `${transitionId}->target`;
+  },
+};
+
 export function getEdgesFromWorkflow(workflow: Workflow) {
   const edges: WorkflowEdge[] = [];
 
   for (const state of workflow.definition.states) {
     for (const transition of state.transitions) {
+      edges.push({
+        id: transition.id,
+        source: state.id,
+        target: transition.id,
+        type: "smoothstep",
+        style: { strokeWidth: 2 },
+      });
       if ("options" in transition.definition) {
-        edges.push({
-          id: `opt-${state.id}-to-${transition.id}`,
-          source: state.id,
-          target: transition.id,
-          type: "smoothstep",
-          style: { strokeWidth: 2 },
-          data: { transition },
-        });
         for (const option of transition.definition.options) {
           edges.push({
-            id: `opt-${transition.id}-to-${option.target_state_id}`,
+            id: Ids.transitionOptionId(transition.id, option.id),
             source: transition.id,
             target: option.target_state_id,
             type: "smoothstep",
@@ -122,55 +136,35 @@ export function getEdgesFromWorkflow(workflow: Workflow) {
                 : undefined,
             markerEnd: { type: MarkerType.ArrowClosed },
             style: { strokeWidth: 2 },
-            data: { transition, option },
           });
         }
       } else if (transition.definition.type === "Approval") {
         edges.push({
-          id: `trn-${state.id}-to-${transition.id}`,
-          source: state.id,
-          target: transition.id,
-          type: "smoothstep",
-          style: { strokeWidth: 2 },
-          data: { transition },
-        });
-        edges.push({
-          id: `trn-${transition.id}-to-${transition.definition.approval_option.target_state_id}`,
+          id: Ids.transitionApproveId(transition.id),
           source: transition.id,
           target: transition.definition.approval_option.target_state_id,
           type: "smoothstep",
-          label: "Approved",
+          label: transition.definition.approval_option.label,
           markerEnd: { type: MarkerType.ArrowClosed },
           style: { strokeWidth: 2 },
-          data: { transition, option: transition.definition.approval_option },
         });
         edges.push({
-          id: `trn-${transition.id}-to-${transition.definition.rejection_option.target_state_id}`,
+          id: Ids.transitionRejectId(transition.id),
           source: transition.id,
           target: transition.definition.rejection_option.target_state_id,
           type: "smoothstep",
-          label: "Denied",
+          label: transition.definition.rejection_option.label,
           markerEnd: { type: MarkerType.ArrowClosed },
           style: { strokeWidth: 2 },
-          data: { transition, option: transition.definition.rejection_option },
         });
       } else {
         edges.push({
-          id: `trn-${state.id}-to-${transition.id}`,
-          source: state.id,
-          target: transition.id,
-          type: "smoothstep",
-          style: { strokeWidth: 2 },
-          data: { transition },
-        });
-        edges.push({
-          id: `trn-${transition.id}-to-${transition.definition.target_state_id}`,
+          id: Ids.transitionTargetId(transition.id),
           source: transition.id,
           target: transition.definition.target_state_id,
           type: "smoothstep",
           markerEnd: { type: MarkerType.ArrowClosed },
           style: { strokeWidth: 2 },
-          data: { transition },
         });
       }
     }

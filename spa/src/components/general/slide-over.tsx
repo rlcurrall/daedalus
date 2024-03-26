@@ -10,7 +10,7 @@ export function SlideOver({
 }: {
   children: React.ReactNode;
   open: boolean;
-  onClose: (open: boolean) => void;
+  onClose(open: boolean): void;
 }) {
   const title = Children.toArray(children).find(
     (child) => (child as any).type === Title,

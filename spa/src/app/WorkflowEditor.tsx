@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { createContext, useCallback, useContext } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
   Connection,
+  Edge,
   MarkerType,
   ReactFlowProvider,
   addEdge,
@@ -38,9 +39,19 @@ export default function WorkflowEditor({ id }: { id?: number }) {
   );
 }
 
+const editorContext = createContext({
+  edges: [] as Edge[],
+  setEdges: (edges: Edge[]) => {},
+  nodes: [] as WorkflowNode[],
+  setNodes: (nodes: WorkflowNode[]) => {},
+});
+
+export function useEditorContext() {
+  return useContext(editorContext);
+}
+
 function InnerWorkflowEditor({ id: _ }: { id?: number }) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
-  const [closed, setClosed] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -66,82 +77,91 @@ function InnerWorkflowEditor({ id: _ }: { id?: number }) {
   useLayoutEffectOnce(fetchWorkflow);
 
   return (
-    <div className="flex h-screen w-screen flex-col ">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={(connection: Connection) => {
-          const source = nodes.find((n) => n.id === connection.source);
-          const target = nodes.find((n) => n.id === connection.target);
+    <editorContext.Provider
+      value={{
+        edges,
+        setEdges,
+        nodes: nodes as WorkflowNode[],
+        setNodes,
+      }}
+    >
+      <div className="flex h-screen w-screen flex-col ">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={(connection: Connection) => {
+            const source = nodes.find((n) => n.id === connection.source);
+            const target = nodes.find((n) => n.id === connection.target);
 
-          // The source and target must be valid and of different types
-          if (
-            !source ||
-            !target ||
-            (source.type === "transition" && target.type === "transition") ||
-            (source.type === "state" && target.type === "state")
-          )
-            return;
+            // The source and target must be valid and of different types
+            if (
+              !source ||
+              !target ||
+              (source.type === "transition" && target.type === "transition") ||
+              (source.type === "state" && target.type === "state")
+            )
+              return;
 
-          const targetIsState = target.type === "state";
+            const targetIsState = target.type === "state";
 
-          setEdges((eds) =>
-            addEdge(
-              {
-                type: "smoothstep",
-                style: { strokeWidth: 2 },
-                markerEnd: targetIsState
-                  ? { type: MarkerType.ArrowClosed }
-                  : undefined,
-                ...connection,
-              },
-              eds,
-            ),
-          );
-        }}
-        edgeTypes={edgeTypes}
-        nodeTypes={nodeTypes}
-        fitView
-      >
-        <Background
-          color="#21222c"
-          className="bg-[#15151d]"
-          gap={32}
-          variant={BackgroundVariant.Lines}
-        />
-      </ReactFlow>
+            setEdges((eds) =>
+              addEdge(
+                {
+                  type: "smoothstep",
+                  style: { strokeWidth: 2 },
+                  markerEnd: targetIsState
+                    ? { type: MarkerType.ArrowClosed }
+                    : undefined,
+                  ...connection,
+                },
+                eds,
+              ),
+            );
+          }}
+          edgeTypes={edgeTypes}
+          nodeTypes={nodeTypes}
+          fitView
+        >
+          <Background
+            color="#21222c"
+            className="bg-[#15151d]"
+            gap={32}
+            variant={BackgroundVariant.Lines}
+          />
+        </ReactFlow>
 
-      <div className="flex items-center justify-end bg-zinc-900 text-white">
-        <div>
-          <button onClick={() => zoomIn()} className="h-8 w-8 p-1">
-            <i aria-hidden className="fas fa-search-plus" />
-          </button>
-          <button onClick={() => zoomOut()} className="h-8 w-8 p-1">
-            <i aria-hidden className="fas fa-search-minus" />
-          </button>
-          <button onClick={() => fitView()} className="h-8 w-8 p-1">
-            <i aria-hidden className="fas fa-compress" />
-          </button>
-          <button onClick={() => onLayout()} className="h-8 w-8 p-1">
-            <i aria-hidden className="fas fa-magic" />
-          </button>
-          <button onClick={() => fetchWorkflow()} className="h-8 w-8 p-1">
-            <i aria-hidden className="fas fa-sync" />
-          </button>
-          <button
-            className="h-8 w-8 p-1"
-            onClick={() =>
-              console.log(
-                getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges),
-              )
-            }
-          >
-            <i aria-hidden className="fas fa-save" />
-          </button>
+        <div className="flex items-center justify-end bg-zinc-900 text-white">
+          <div>
+            <button onClick={() => zoomIn()} className="h-8 w-8 p-1">
+              <i aria-hidden className="fas fa-search-plus" />
+            </button>
+            <button onClick={() => zoomOut()} className="h-8 w-8 p-1">
+              <i aria-hidden className="fas fa-search-minus" />
+            </button>
+            <button onClick={() => fitView()} className="h-8 w-8 p-1">
+              <i aria-hidden className="fas fa-compress" />
+            </button>
+            <button onClick={() => onLayout()} className="h-8 w-8 p-1">
+              <i aria-hidden className="fas fa-magic" />
+            </button>
+            <button onClick={() => fetchWorkflow()} className="h-8 w-8 p-1">
+              <i aria-hidden className="fas fa-sync" />
+            </button>
+            <button
+              className="h-8 w-8 p-1"
+              onClick={() =>
+                console.log(
+                  getWorkflowFromNodesAndEdges(nodes as WorkflowNode[], edges),
+                )
+              }
+            >
+              <i aria-hidden className="fas fa-save" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </editorContext.Provider>
   );
 }

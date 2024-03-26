@@ -24,6 +24,7 @@
     "rustc",
     "Signin",
     "simplelog",
+    "smoothstep",
     "stylesheet",
     "tailwindcss",
     "tsync",

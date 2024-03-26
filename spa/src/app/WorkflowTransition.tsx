@@ -10,17 +10,28 @@ import {
 import { Input } from "@/components/general/input";
 import { Select } from "@/components/general/select";
 import { SlideOver } from "@/components/general/slide-over";
+import { Switch } from "@/components/general/switch";
 import { Strong, Text } from "@/components/general/text";
 import { Textarea } from "@/components/general/textarea";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { Handle, NodeProps, Position, useEdges, useNodes } from "reactflow";
-import { WorkflowEdgeData } from "./utils";
+import {
+  Handle,
+  MarkerType,
+  NodeProps,
+  Position,
+  useEdges,
+  useNodes,
+} from "reactflow";
+import { useEditorContext } from "./WorkflowEditor";
+import { Ids, WorkflowEdgeData } from "./utils";
 
 export default function WorkflowTransition({
   data: transition,
   selected,
 }: NodeProps<WorkflowTransition & { dirty: boolean }>) {
+  const { edges, setEdges, nodes, setNodes } = useEditorContext();
+
   const [modalState, setModalState] = useState<"edit" | "view" | "closed">(
     "closed",
   );
@@ -40,7 +51,11 @@ export default function WorkflowTransition({
           transition.dirty && "ring-1 ring-yellow-800",
         )}
       >
-        <ActionPanel open={selected} onEdit={() => setModalState("view")} />
+        <ActionPanel
+          open={selected}
+          onEdit={() => setModalState("view")}
+          onRemove={() => setNodes(nodes.filter((n) => n.id !== transition.id))}
+        />
 
         <Text className="relative flex items-center gap-2 px-4 py-2 font-bold">
           <TransitionTypeIcon type={transition.definition.type} />
@@ -59,6 +74,70 @@ export default function WorkflowTransition({
         open={modalState === "edit"}
         onClose={() => setModalState("closed")}
         onCancel={() => setModalState("view")}
+        onChange={(updated) => {
+          transition.name = updated.name;
+          transition.description = updated.description;
+          transition.definition = updated.definition;
+          transition.dirty = true;
+
+          // deep copy of edges, just to make sure we don't run into an issue with react
+          let edgesClone = JSON.parse(
+            JSON.stringify(
+              edges.filter((edge) => edge.source !== transition.id),
+            ),
+          ) as typeof edges;
+
+          if (updated.definition.type === "Approval")
+            edgesClone.push(
+              {
+                id: Ids.transitionApproveId(updated.id),
+                source: updated.id,
+                target: updated.definition.approval_option.target_state_id,
+                type: "smoothstep",
+                label: updated.definition.approval_option.label,
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2 },
+              },
+              {
+                id: Ids.transitionRejectId(updated.id),
+                source: updated.id,
+                target: updated.definition.rejection_option.target_state_id,
+                type: "smoothstep",
+                label: updated.definition.rejection_option.label,
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2 },
+              },
+            );
+
+          if (
+            updated.definition.type === "Automatic" ||
+            updated.definition.type === "VendorConfirmation"
+          )
+            edgesClone.push({
+              id: Ids.transitionTargetId(updated.id),
+              source: updated.id,
+              target: updated.definition.target_state_id,
+              type: "smoothstep",
+              markerEnd: { type: MarkerType.ArrowClosed },
+              style: { strokeWidth: 2 },
+            });
+
+          if (updated.definition.type === "Manual")
+            updated.definition.options.forEach((option) => {
+              edgesClone.push({
+                id: Ids.transitionOptionId(updated.id, option.id),
+                source: updated.id,
+                target: option.target_state_id,
+                type: "smoothstep",
+                label: option.label,
+                markerEnd: { type: MarkerType.ArrowClosed },
+                style: { strokeWidth: 2 },
+              });
+            });
+
+          setEdges(edgesClone);
+          setModalState("view");
+        }}
       />
 
       <Handle
@@ -78,8 +157,8 @@ function DetailsPanel({
 }: {
   transition: WorkflowTransition;
   open: boolean;
-  onClose: (open: boolean) => void;
-  onEdit: () => void;
+  onClose(open: boolean): void;
+  onEdit(): void;
 }) {
   return (
     <SlideOver open={open} onClose={onClose}>
@@ -185,6 +264,12 @@ function TransitionOption({ option }: { option: TransitionOption }) {
         </Text>
 
         <div className={clsx("space-y-2", option.data.length && "mt-4")}>
+          {option.comment_required && (
+            <Text className="ml-4 flex items-center gap-2">
+              <i aria-hidden className="fas fa-comment" />
+              Comment Required
+            </Text>
+          )}
           {option.data.map((data) => (
             <Text key={data.id} className="ml-4 flex items-center gap-2">
               {data.type === "UserId" && (
@@ -215,11 +300,13 @@ function EditPanel({
   transition,
   onClose,
   onCancel,
+  onChange,
 }: {
   open: boolean;
   transition: WorkflowTransition;
-  onClose: () => void;
-  onCancel: () => void;
+  onClose(): void;
+  onCancel(): void;
+  onChange(transition: WorkflowTransition): void;
 }) {
   const sourceStates = useEdges<WorkflowEdgeData>()
     .filter((edge) => edge.target === transition.id)
@@ -231,12 +318,12 @@ function EditPanel({
   const [name, setName] = useState(transition.name);
   const [description, setDescription] = useState(transition.description ?? "");
   const [type, setType] = useState(transition.definition.type);
-  const [approverId, setApproverId] = useState(
+  const [approver_id, setApproverId] = useState(
     "approver_id" in transition.definition
       ? transition.definition.approver_id
       : "",
   );
-  const [targetStateId, setTargetStateId] = useState(
+  const [target_state_id, setTargetStateId] = useState(
     "target_state_id" in transition.definition
       ? transition.definition.target_state_id
       : "",
@@ -244,7 +331,7 @@ function EditPanel({
   const [options, setOptions] = useState(
     "options" in transition.definition ? transition.definition.options : [],
   );
-  const [approvalOption, setApprovalOption] = useState(
+  const [approval_option, setApprovalOption] = useState(
     "approval_option" in transition.definition
       ? transition.definition.approval_option
       : {
@@ -255,7 +342,7 @@ function EditPanel({
           data: [],
         },
   );
-  const [rejectionOption, setRejectionOption] = useState(
+  const [rejection_option, setRejectionOption] = useState(
     "rejection_option" in transition.definition
       ? transition.definition.rejection_option
       : {
@@ -268,8 +355,29 @@ function EditPanel({
   );
 
   const submit = (data: FormData) => {
-    const ts = availableStates.find((s) => s.id === targetStateId);
-    console.log({ type, name, description, targetStateId, ts, options });
+    let definition: TransitionDefinition;
+
+    switch (type) {
+      case "Automatic":
+        definition = { type, target_state_id };
+        break;
+      case "Approval":
+        definition = {
+          type,
+          approver_id: typeof approver_id === "number" ? approver_id : 0,
+          approval_option,
+          rejection_option,
+        };
+        break;
+      case "Manual":
+        definition = { type, options };
+        break;
+      case "VendorConfirmation":
+        definition = { type, target_state_id };
+        break;
+    }
+
+    onChange({ id: transition.id, name, description, definition });
   };
 
   const reset = () => {
@@ -400,7 +508,7 @@ function EditPanel({
                   <Select
                     required
                     name="approver_id"
-                    defaultValue={approverId === 0 ? "" : approverId}
+                    defaultValue={approver_id === 0 ? "" : approver_id}
                     onChange={(e) => setApproverId(parseInt(e.target.value))}
                   >
                     <option disabled value="" hidden>
@@ -427,7 +535,7 @@ function EditPanel({
                   <Select
                     required
                     name="target_state_id"
-                    defaultValue={targetStateId}
+                    defaultValue={target_state_id}
                     onChange={(e) => setTargetStateId(e.target.value)}
                   >
                     <option disabled value="" hidden>
@@ -512,17 +620,17 @@ function EditPanel({
 
                 <div className="grid gap-4">
                   <OptionField
-                    key={approvalOption.id}
+                    key={approval_option.id}
                     title="Approval"
-                    option={approvalOption}
+                    option={approval_option}
                     availableStates={availableStates}
                     onChange={setApprovalOption}
                   />
 
                   <OptionField
-                    key={rejectionOption.id}
+                    key={rejection_option.id}
                     title="Rejection"
-                    option={rejectionOption}
+                    option={rejection_option}
                     availableStates={availableStates}
                     onChange={setRejectionOption}
                   />
@@ -533,7 +641,7 @@ function EditPanel({
 
           <div className="grow" />
 
-          <div className="mt-4 flex gap-4">
+          <div className="flex gap-4 py-4">
             <Button color="rose" type="button" onClick={() => onCancel()}>
               Cancel
             </Button>
@@ -559,8 +667,8 @@ function OptionField({
   option: TransitionOption;
   title: string;
   availableStates: { id: string; name: string }[];
-  onRemove?: (id: string) => void;
-  onChange: (option: TransitionOption) => void;
+  onRemove?(id: string): void;
+  onChange(option: TransitionOption): void;
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-4 rounded border border-zinc-700 bg-zinc-800 p-3 pt-2">
@@ -586,6 +694,7 @@ function OptionField({
             placeholder="Option Label"
           />
         </Field>
+
         <Field>
           <Label>
             Target State <span className="text-rose-400">*</span>
@@ -593,7 +702,11 @@ function OptionField({
           <Select
             required
             name={`options-[${option.id}].target_state_id`}
-            defaultValue={option.target_state_id}
+            defaultValue={
+              availableStates.find((o) => o.id === option.target_state_id)
+                ? option.target_state_id
+                : ""
+            }
             onChange={(e) =>
               onChange({ ...option, target_state_id: e.target.value })
             }
@@ -608,13 +721,26 @@ function OptionField({
             ))}
           </Select>
         </Field>
+
+        <Field className="space-x-2">
+          <Label>
+            Comment Required <span className="text-rose-400">*</span>
+          </Label>
+          <Switch
+            color="blue"
+            name={`options-[${option.id}].comment_required`}
+            defaultChecked={option.comment_required}
+            onChange={(comment_required) =>
+              onChange({ ...option, comment_required })
+            }
+          />
+        </Field>
       </FieldGroup>
 
       {option.data.map((data, i) => (
         <OptionDataField
           key={data.id}
           data={data}
-          index={i}
           onRemove={(id) => {
             const data = option.data.filter((d) => d.id !== id);
             onChange({ ...option, data });
@@ -655,12 +781,10 @@ function OptionField({
 
 function OptionDataField({
   data,
-  index,
   onRemove,
   onChange,
 }: {
   data: TransitionOptionData;
-  index: number;
   onRemove(id: string): void;
   onChange(data: TransitionOptionData): void;
 }): JSX.Element {
@@ -670,7 +794,7 @@ function OptionDataField({
       <FieldGroup>
         <Field className="flex items-center justify-between gap-2">
           <Select
-            name={`options[${index}].data[${index}].type`}
+            name={`option.data-[${data.id}].type`}
             defaultValue={data.type}
             onChange={(e) => {
               const type = e.target.value as TransitionOptionData["type"];
@@ -685,7 +809,7 @@ function OptionDataField({
             <option value="VendorId">Vendor</option>
           </Select>
           <Input
-            name={`options[${index}].data[${index}].label`}
+            name={`option.data-[${data.id}].label`}
             defaultValue={data.label}
             onChange={(e) => onChange({ ...data, label: e.target.value })}
             placeholder={
@@ -736,10 +860,11 @@ function TransitionTypeIcon({ type }: { type: TransitionDefinition["type"] }) {
 function ActionPanel({
   open,
   onEdit,
+  onRemove,
 }: {
   open: boolean;
-  onAddAction?: () => void;
-  onEdit: () => void;
+  onEdit(): void;
+  onRemove(): void;
 }): JSX.Element {
   return (
     <div
@@ -753,6 +878,10 @@ function ActionPanel({
       <Button color="blue" onClick={onEdit}>
         <i aria-hidden className="fas fa-circle-info" />
         <span>Details</span>
+      </Button>
+      <Button color="rose" onClick={onRemove}>
+        <i aria-hidden className="fas fa-trash" />
+        <span>Remove</span>
       </Button>
     </div>
   );
