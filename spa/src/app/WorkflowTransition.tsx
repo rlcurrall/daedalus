@@ -854,7 +854,15 @@ function TransitionTypeIcon({ type }: { type: TransitionDefinition["type"] }) {
       </span>
     );
   if (type === "VendorConfirmation")
-    return <i aria-hidden className="fas fa-truck" />;
+    return (
+      <span className="relative">
+        <i
+          aria-hidden
+          className="fas fa-check absolute -bottom-[0.1rem] -right-[0.25rem] text-base text-emerald-600"
+        />
+        <i aria-hidden className="fas fa-truck" />
+      </span>
+    );
 }
 
 function ActionPanel({
