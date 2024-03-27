@@ -18,8 +18,8 @@ use crate::result::AppError;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[tsync]
 pub struct WorkflowPosition {
-    pub x: i32,
-    pub y: i32,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Clone, Deserialize, Insertable, Serialize)]

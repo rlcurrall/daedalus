@@ -1,0 +1,285 @@
+#!/bin/bash
+
+read -r -d '' inserts <<SQL
+do \$\$
+declare
+  tenant_id bigint;
+begin
+
+INSERT INTO tenants (name) VALUES ('Acme Corporation') RETURNING id INTO tenant_id;
+
+INSERT INTO workflows (tenant_id, name, description, definition) VALUES (tenant_id, 'Warranty', 'Homeowner warranty claim workflowj', '{
+  "initial_state": "018cdc83-8406-7eed-9139-6f2d57602053",
+  "metadata": {
+    "positions": {
+      "018cdc87-602a-7345-b9a0-de094ef68e8f": {
+        "x": 328.25,
+        "y": 320
+      },
+      "018cdc83-8406-7eed-9139-6f2d57602053": {
+        "x": 260,
+        "y": 40
+      },
+      "018cdc88-9ad8-74ee-999d-09177a0dbb3f": {
+        "x": 304,
+        "y": 661.5
+      },
+      "018cdc88-0142-7f0d-908f-a4dc33960e27": {
+        "x": 282,
+        "y": 454
+      },
+      "018cdc8b-3817-7269-a644-31342c47985c": {
+        "x": -131.5,
+        "y": 803
+      },
+      "018cdc91-1d03-78da-8e33-4f80b0193888": {
+        "x": 630.25,
+        "y": 1015.5
+      },
+      "018cdc8b-1df8-75be-8f74-9b3386aa938c": {
+        "x": 637,
+        "y": 803
+      },
+      "018cdcbf-6653-786d-b8c7-fd32d0581239": {
+        "x": 130,
+        "y": 1370
+      },
+      "91ffaf21-a635-4814-a310-15db102f805d": {
+        "x": 632.5,
+        "y": 1370
+      },
+      "018cdc91-8b61-76a6-988f-4f1657181cab": {
+        "x": 637.5,
+        "y": 1157
+      },
+      "74dc5e29-8a83-4b5a-8174-dc743f650c0d": {
+        "x": 296,
+        "y": 1511
+      }
+    }
+  },
+  "states": [
+    {
+      "id": "018cdc83-8406-7eed-9139-6f2d57602053",
+      "name": "Request Submitted",
+      "description": "The request has been submitted",
+      "is_end_state": false,
+      "entry_actions": [
+        {
+          "id": "91e59229-d9c0-4671-9c3f-98a0af79cfd8",
+          "name": "Auto Assign",
+          "definition": {
+            "type": "AutoAssign"
+          }
+        },
+        {
+          "id": "f32a21f4-757d-402d-9991-a9d0b749b3de",
+          "name": "Email",
+          "definition": {
+            "type": "Email",
+            "template_id": 1,
+            "email": "test@example.com"
+          }
+        }
+      ],
+      "exit_actions": [
+        {
+          "id": "4dd858f8-7b4c-4ee7-96ac-74ffe2c72e6e",
+          "name": "Email",
+          "definition": {
+            "type": "Email",
+            "template_id": 1,
+            "email": "test@test.com"
+          }
+        }
+      ],
+      "transitions": [
+        {
+          "id": "018cdc87-602a-7345-b9a0-de094ef68e8f",
+          "name": "Automatic",
+          "definition": {
+            "type": "Automatic",
+            "target_state_id": "018cdc88-0142-7f0d-908f-a4dc33960e27"
+          },
+          "dirty": false
+        }
+      ],
+      "dirty": false
+    },
+    {
+      "id": "018cdc88-0142-7f0d-908f-a4dc33960e27",
+      "name": "Triage",
+      "description": "The request is being triaged",
+      "is_end_state": false,
+      "entry_actions": [],
+      "exit_actions": [],
+      "transitions": [
+        {
+          "id": "018cdc88-9ad8-74ee-999d-09177a0dbb3f",
+          "name": "Triage completed",
+          "definition": {
+            "type": "Manual",
+            "options": [
+              {
+                "id": "c10e3765-5e5f-41a3-99ab-4a22dd36213c",
+                "label": "Not Covered",
+                "target_state_id": "018cdc8b-3817-7269-a644-31342c47985c",
+                "comment_required": true,
+                "data": [
+                  {
+                    "id": "eb1e2d24-8735-45bb-ae51-44c974874b7f",
+                    "type": "UserId",
+                    "label": "Assign To"
+                  },
+                  {
+                    "id": "f0ae5ef9-f2fc-424d-8f8d-9029fae69a2d",
+                    "type": "Date",
+                    "label": "Inspection Date"
+                  }
+                ]
+              },
+              {
+                "id": "563a1b7a-8998-4a1f-b690-4d0405df3a58",
+                "label": "Covered",
+                "target_state_id": "018cdc8b-1df8-75be-8f74-9b3386aa938c",
+                "comment_required": false,
+                "data": [
+                  {
+                    "id": "7f6b0ea7-48af-4e6f-9214-27fec359f034",
+                    "type": "UserId",
+                    "label": "Assign To"
+                  }
+                ]
+              }
+            ]
+          },
+          "dirty": false
+        }
+      ],
+      "dirty": false
+    },
+    {
+      "id": "018cdc8b-3817-7269-a644-31342c47985c",
+      "name": "Closed",
+      "description": "The request is closed",
+      "is_end_state": true,
+      "entry_actions": [
+        {
+          "id": "018cdc8d-ac19-7d23-be7b-61d28d60a71d",
+          "name": "Email",
+          "definition": {
+            "type": "Email",
+            "template_id": 1,
+            "email": "asdf@test.com"
+          }
+        }
+      ],
+      "exit_actions": [],
+      "transitions": [],
+      "dirty": false
+    },
+    {
+      "id": "018cdc8b-1df8-75be-8f74-9b3386aa938c",
+      "name": "Inspection Scheduled",
+      "is_end_state": false,
+      "entry_actions": [],
+      "exit_actions": [],
+      "transitions": [
+        {
+          "id": "018cdc91-1d03-78da-8e33-4f80b0193888",
+          "name": "Inspection Completed",
+          "definition": {
+            "type": "Manual",
+            "options": [
+              {
+                "id": "6c9fbe55-af8c-438f-a43a-06ddbd07ad90",
+                "label": "Inspection Completed",
+                "target_state_id": "018cdc91-8b61-76a6-988f-4f1657181cab",
+                "comment_required": true,
+                "data": [
+                  {
+                    "id": "9a4e43e2-be79-48a2-ad36-cc34329615cf",
+                    "type": "Date",
+                    "label": "Inspection Date"
+                  }
+                ]
+              }
+            ]
+          },
+          "dirty": false
+        }
+      ],
+      "dirty": false
+    },
+    {
+      "id": "018cdc91-8b61-76a6-988f-4f1657181cab",
+      "name": "Review",
+      "is_end_state": false,
+      "entry_actions": [],
+      "exit_actions": [],
+      "transitions": [
+        {
+          "id": "018cdcbf-6653-786d-b8c7-fd32d0581239",
+          "name": "Manager Approved",
+          "definition": {
+            "type": "Approval",
+            "approver_id": 1,
+            "approval_option": {
+              "id": "4413621c-2f15-440f-b66d-b2b8bd475042",
+              "label": "Approved",
+              "target_state_id": "018cdc8b-3817-7269-a644-31342c47985c",
+              "comment_required": false,
+              "data": []
+            },
+            "rejection_option": {
+              "id": "28ca6106-823a-4492-b1f6-c4ee4f0b236b",
+              "label": "Denied",
+              "target_state_id": "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
+              "comment_required": true,
+              "data": []
+            }
+          },
+          "dirty": false
+        },
+        {
+          "id": "91ffaf21-a635-4814-a310-15db102f805d",
+          "name": "Homeowner Approval",
+          "definition": {
+            "type": "Approval",
+            "approver_id": 1,
+            "approval_option": {
+              "id": "f4e0377c-920a-44b3-bf60-7ea54b2b6725",
+              "label": "Approved",
+              "target_state_id": "018cdc8b-3817-7269-a644-31342c47985c",
+              "comment_required": false,
+              "data": []
+            },
+            "rejection_option": {
+              "id": "24489332-b76a-4b1d-afb1-7136d7c5e906",
+              "label": "Denied",
+              "target_state_id": "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
+              "comment_required": true,
+              "data": []
+            }
+          },
+          "dirty": false
+        }
+      ],
+      "dirty": false
+    },
+    {
+      "id": "74dc5e29-8a83-4b5a-8174-dc743f650c0d",
+      "name": "Failed",
+      "is_end_state": true,
+      "entry_actions": [],
+      "exit_actions": [],
+      "transitions": [],
+      "dirty": false
+    }
+  ]
+}');
+
+end \$\$;
+SQL
+
+psql postgres://postgres:postgres@localhost:5432/daedalus -c "$inserts" >> /dev/null

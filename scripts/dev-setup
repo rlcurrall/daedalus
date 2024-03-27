@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-##
+#!/bin/bash
+
 ## Description:
 ##   Setup the locoal development environment. This will create the necessary PEM
 ##   files to create and validate JWT tokens, as well as generate a JWT token to
